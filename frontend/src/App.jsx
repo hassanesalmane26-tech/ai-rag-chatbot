@@ -1,3 +1,4 @@
+import Header from "./components/navigation/Header";
 import "./App.css";
 
 import MainLayout from "./app/layout/MainLayout";
@@ -13,15 +14,7 @@ function App() {
 
   return (
     <MainLayout>
-      <header className="topbar">
-        <div className="logo">🔱</div>
-
-        <div>
-          <h1>TRIDENT AI</h1>
-          <p>Intelligence • Recherche • Documents</p>
-        </div>
-      </header>
-
+    <Header />
       <Upload />
 
       <Chat
