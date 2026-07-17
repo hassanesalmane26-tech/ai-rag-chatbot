@@ -1,3 +1,4 @@
+import Workspace from "./features/workspace/components/Workspace";
 import Header from "./components/navigation/Header";
 import "./App.css";
 
@@ -14,18 +15,21 @@ function App() {
 
   return (
     <MainLayout>
-    <Header />
-      <Upload />
+      <Header />
 
-      <Chat
-        messages={messages}
-        loading={loading}
-      />
+      <Workspace>
+        <Upload />
 
-      <Input
-        onSend={send}
-        disabled={loading}
-      />
+        <Chat
+          messages={messages}
+          loading={loading}
+        />
+
+        <Input
+          onSend={send}
+          disabled={loading}
+        />
+      </Workspace>
     </MainLayout>
   );
 }
