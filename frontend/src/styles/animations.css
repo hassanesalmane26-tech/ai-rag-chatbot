@@ -1,0 +1,79 @@
+@keyframes fade{
+
+from{
+
+opacity:0;
+transform:translateY(15px);
+
+}
+
+to{
+
+opacity:1;
+transform:translateY(0);
+
+}
+
+}
+
+@keyframes glow{
+
+0%{
+
+box-shadow:0 0 10px rgba(59,130,246,.20);
+
+}
+
+50%{
+
+box-shadow:0 0 35px rgba(59,130,246,.55);
+
+}
+
+100%{
+
+box-shadow:0 0 10px rgba(59,130,246,.20);
+
+}
+
+}
+
+.logo{
+
+animation:glow 4s infinite;
+
+}
+
+button{
+
+transition:
+transform .25s,
+box-shadow .25s;
+
+}
+
+button:hover{
+
+transform:translateY(-2px);
+
+}
+
+::-webkit-scrollbar{
+
+width:8px;
+
+}
+
+::-webkit-scrollbar-thumb{
+
+background:#334155;
+
+border-radius:10px;
+
+}
+
+::-webkit-scrollbar-track{
+
+background:transparent;
+
+}

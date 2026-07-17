@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# TRIDENT AI
+frontend/node_modules/
+frontend/dist/
+vector_db/
