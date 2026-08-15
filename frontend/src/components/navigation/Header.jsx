@@ -1,11 +1,49 @@
-export default function Header() {
+import {
+  Bell,
+  Search,
+  Sparkles,
+  UserCircle2,
+} from "lucide-react";
+
+export default function Header({
+  title = "TRIDENT AI",
+}) {
   return (
     <header className="topbar">
-      <div className="logo">🔱</div>
+      <div className="topbar-left">
+        <div className="logo">
+          🔱
+        </div>
 
-      <div>
-        <h1>TRIDENT AI</h1>
-        <p>Intelligence • Recherche • Documents</p>
+        <div>
+          <h1>{title}</h1>
+          <p>AI Workspace • RAG • Agents • Knowledge</p>
+        </div>
+      </div>
+
+      <div className="topbar-right">
+        <div className="search-box" aria-label="Recherche indisponible dans Genesis">
+          <Search size={18} />
+
+          <input
+            type="text"
+            placeholder="Recherche bientôt disponible"
+            aria-label="Recherche indisponible dans Genesis"
+            disabled
+          />
+        </div>
+
+        <button className="icon-btn" aria-label="Assistant IA indisponible dans Genesis" title="Indisponible dans Genesis" disabled>
+          <Sparkles size={18} />
+        </button>
+
+        <button className="icon-btn" aria-label="Notifications indisponibles dans Genesis" title="Indisponible dans Genesis" disabled>
+          <Bell size={18} />
+        </button>
+
+        <button className="profile-btn" aria-label="Profil indisponible dans Genesis" title="Indisponible dans Genesis" disabled>
+          <UserCircle2 size={22} />
+        </button>
       </div>
     </header>
   );

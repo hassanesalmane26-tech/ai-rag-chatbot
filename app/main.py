@@ -1,169 +1,56 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-from openai import OpenAI
-import os
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
+from app.api.genesis import router as genesis_router
 from app.core.config import settings
 from app.database.database import Base, engine
-from app.database import models
+from app.database import genesis_models, models  # Register all metadata before bootstrap.
 
-from sqlalchemy.orm import Session
-from app.database.database import SessionLocal
-from app.database.models import ChatMessage
+app = FastAPI(title="TRIDENT GENESIS", version="0.2.0", debug=settings.DEBUG, root_path="/api")
 
-from fastapi import UploadFile, File
-import shutil
-from pathlib import Path
-
-from app.rag.vectorstore import vectorstore
-from app.rag.search import search_documents
-from app.rag.document_manager import (
-    save_document,
-    rebuild_index,
-    list_documents,
-    delete_document,
-)
-
-app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION,
-    debug=settings.DEBUG,
-    root_path="/api",
-)
-
+# Genesis bootstrap only. Alembic replaces this lifecycle in the production-foundation phase.
 Base.metadata.create_all(bind=engine)
 
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
-class ChatRequest(BaseModel):
-    message: str
+def error_response(status_code: int, code: str, message: str, request: Request) -> JSONResponse:
+    return JSONResponse(
+        status_code=status_code,
+        content={"error": {"code": code, "message": message, "request_id": request.headers.get("x-request-id")}},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, _exc: RequestValidationError):
+    return error_response(422, "VALIDATION_ERROR", "La requête est invalide.", request)
+
+
+@app.exception_handler(HTTPException)
+async def http_error(request: Request, exc: HTTPException):
+    codes = {
+        404: "RESOURCE_NOT_FOUND",
+        413: "PAYLOAD_TOO_LARGE",
+        415: "UNSUPPORTED_MEDIA_TYPE",
+        422: "UNPROCESSABLE_ENTITY",
+        503: "DEPENDENCY_UNAVAILABLE",
+    }
+    message = exc.detail if isinstance(exc.detail, str) else "La requête a échoué."
+    return error_response(exc.status_code, codes.get(exc.status_code, "REQUEST_FAILED"), message, request)
+
+
+@app.exception_handler(Exception)
+async def unhandled_error(request: Request, _exc: Exception):
+    return error_response(500, "INTERNAL_ERROR", "Une erreur interne est survenue.", request)
 
 
 @app.get("/")
 def root():
-    return {
-        "status": "online",
-        "application": settings.APP_NAME,
-        "version": settings.APP_VERSION,
-        "message": "Bienvenue sur AI RAG Chatbot 🚀",
-    }
+    return {"status": "online", "application": "TRIDENT GENESIS", "version": "0.2.0"}
 
 
-@app.post("/chat")
-def chat(data: ChatRequest):
-    db = SessionLocal()
-
-    try:
-        history = (
-            db.query(ChatMessage)
-            .order_by(ChatMessage.id.desc())
-            .limit(10)
-            .all()
-        )
-
-        history.reverse()
-
-        conversation = []
-
-        for msg in history:
-            conversation.append({
-                "role": "user",
-                "content": msg.user_message,
-            })
-
-            conversation.append({
-                "role": "assistant",
-                "content": msg.ai_response,
-            })
-
-        conversation.append({
-            "role": "user",
-            "content": data.message,
-        })
-
-        results = search_documents(data.message)
-
-        relevant_docs = [
-            doc
-            for doc, score in results
-        ]
-
-        context = "\n\n".join(
-            doc.page_content
-            for doc in relevant_docs
-        )
-
-        sources = list(
-            {
-                doc.metadata.get("source", "Inconnu")
-                for doc in relevant_docs
-            }
-        )
-
-        conversation.insert(
-            0,
-            {
-                "role": "system",
-                "content": f"""
-        Tu es Nova.
-
-        Réponds en priorité avec les informations présentes dans ce contexte.
-
-        Contexte :
-
-        {context}
-
-        Si le contexte ne contient pas la réponse, indique-le clairement puis réponds avec tes connaissances générales.
-        """,
-            },
-        )
-
-        response = client.responses.create(
-            model="gpt-4.1-mini",
-            input=conversation,
-        )
-
-        ai_reply = response.output_text
-
-        db.add(
-            ChatMessage(
-                user_message=data.message,
-                ai_response=ai_reply,
-            )
-        )
-
-        db.commit()
-
-        return {
-            "reply": ai_reply,
-            "sources": sources,
-        }
-    finally:
-        db.close()
+@app.get("/health/live")
+def health_live():
+    return {"status": "ok"}
 
 
-@app.post("/upload")
-async def upload_document(file: UploadFile = File(...)):
-    save_document(file)
-
-    chunks = rebuild_index()
-
-    return {
-        "message": "Document indexé avec succès",
-        "chunks": chunks,
-    }
-
-@app.get("/documents")
-def get_documents():
-    return {
-        "documents": list_documents()
-    }
-
-
-@app.delete("/documents/{filename}")
-def remove_document(filename: str):
-    delete_document(filename)
-
-    return {
-        "message": f"{filename} supprimé avec succès."
-    }
+app.include_router(genesis_router)

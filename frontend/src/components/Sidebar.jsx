@@ -1,26 +1,24 @@
-function Sidebar() {
-  return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
-        <h2>🔱 TRIDENT AI</h2>
-      </div>
+import { useState } from "react";
+import { BookOpen, House, MessageSquarePlus, MessagesSquare } from "lucide-react";
+import { useWorkspaceContext } from "../context/WorkspaceContext";
+import WorkspaceSelector from "./workspace/WorkspaceSelector";
 
-      <nav className="sidebar-menu">
-        <button>💬 Chat</button>
-        <button>📄 Documents</button>
-        <button>⭐ Favoris</button>
-        <button>⚙️ Paramètres</button>
-      </nav>
+const items = [
+  ["home", "Accueil", House],
+  ["conversations", "Conversations", MessagesSquare],
+  ["knowledge", "Knowledge", BookOpen],
+];
 
-      <div className="sidebar-documents">
-        <h3>Documents</h3>
-
-        <div className="empty">
-          Aucun document importé
-        </div>
-      </div>
-    </aside>
-  );
+export default function Sidebar() {
+  const { activeView, setActiveView, createWorkspace } = useWorkspaceContext();
+  const [creating, setCreating] = useState(false);
+  const [name, setName] = useState("");
+  async function submit(event) { event.preventDefault(); if (!name.trim()) return; await createWorkspace(name.trim()); setName(""); setCreating(false); }
+  return <aside className="sidebar">
+    <div className="sidebar-brand"><div className="brand-icon">🔱</div><div><h2>TRIDENT</h2><span>GENESIS</span></div></div>
+    <nav className="sidebar-menu">{items.map(([id, label, Icon]) => <button key={id} className={`menu-item ${activeView === id ? "active" : ""}`} onClick={() => setActiveView(id)}><Icon size={17} />{label}</button>)}</nav>
+    <div className="sidebar-documents"><WorkspaceSelector /></div>
+    <div className="sidebar-create">{creating ? <form onSubmit={submit}><input aria-label="Nom du nouveau Workspace" autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Nom du Workspace" /><button type="submit">Créer</button></form> : <button onClick={() => setCreating(true)}><MessageSquarePlus size={16} /> Nouveau Workspace</button>}</div>
+    <div className="sidebar-footer"><div className="status-dot"></div><div><strong>Mode GENESIS</strong><p>Workspace local</p></div></div>
+  </aside>;
 }
-
-export default Sidebar;

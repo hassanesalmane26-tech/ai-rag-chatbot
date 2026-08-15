@@ -1,7 +1,16 @@
-export default function Workspace({ children }) {
+export default function Workspace({
+  title = "Workspace",
+  children,
+}) {
   return (
-    <main className="workspace">
-      {children}
-    </main>
+    <section className="workspace">
+      <div className="workspace-header">
+        <h2>{title}</h2>
+      </div>
+
+      <div className="workspace-container">
+        {children}
+      </div>
+    </section>
   );
 }

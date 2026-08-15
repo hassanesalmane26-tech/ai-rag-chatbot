@@ -1,0 +1,23 @@
+# TRIDENT Documentation
+
+This directory is the source of truth for durable technical decisions. Documents
+are updated before significant implementation changes are made.
+
+| Document | Purpose |
+| --- | --- |
+| [Architecture](architecture/target-architecture.md) | Current baseline, target architecture, and system boundaries. |
+| [GENESIS blueprint](architecture/trident-genesis-blueprint.md) | Implemented Workspace-centric GENESIS product reference. |
+| [Decision records](decisions/README.md) | Immutable reasoning for material technical choices. |
+| [Roadmap](roadmap.md) | Sequenced delivery plan and exit criteria. |
+| [Rules Bible](rules-bible.md) | Non-negotiable platform rules. |
+| [Engineering standards](engineering-standards.md) | Build, test, API, and delivery expectations. |
+| [Deployment architecture](deployment-architecture.md) | Production topology and operating model. |
+| [Security baseline](security-baseline.md) | Threat posture and mandatory controls. |
+| [Phase 1 specification](phases/phase-1-production-foundation.md) | Detailed production-foundation design; not implementation authorization. |
+| [Sprint 1 stabilization](phases/sprint-1-stabilization.md) | Verification scope and intentionally deferred GENESIS work. |
+
+## Documentation rule
+
+An implementation that changes a service boundary, persistence model, security
+posture, deployment topology, or public API must have its rationale recorded in
+an ADR before the change is merged.

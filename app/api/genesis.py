@@ -1,0 +1,186 @@
+"""Public Genesis API. All product resources are nested below Workspace."""
+
+import json
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from openai import OpenAI
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+from app.conversations.service import (
+    build_citations,
+    create_conversation,
+    serialize_conversation,
+    serialize_message,
+)
+from app.core.config import settings
+from app.database.database import get_db
+from app.database.genesis_models import Conversation, Workspace, WorkspaceDocument, WorkspaceMessage
+from app.knowledge.service import create_document, delete_document, serialize_document
+from app.workspaces.service import ensure_genesis_workspace, serialize_workspace, workspace_activity
+
+router = APIRouter(prefix="/v1", tags=["Genesis"])
+
+
+class WorkspaceInput(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=1000)
+
+
+class ConversationInput(BaseModel):
+    title: str | None = Field(default=None, max_length=160)
+
+
+class MessageInput(BaseModel):
+    content: str = Field(min_length=1, max_length=12000)
+
+
+def data(value, meta: dict | None = None):
+    return {"data": value, "meta": meta or {}}
+
+
+def get_workspace(workspace_id: str, db: Session) -> Workspace:
+    workspace = db.get(Workspace, workspace_id)
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace introuvable.")
+    return workspace
+
+
+def get_conversation(workspace_id: str, conversation_id: str, db: Session) -> Conversation:
+    conversation = db.get(Conversation, conversation_id)
+    if not conversation or conversation.workspace_id != workspace_id:
+        raise HTTPException(status_code=404, detail="Conversation introuvable.")
+    return conversation
+
+
+@router.get("/workspaces")
+def list_workspaces(db: Session = Depends(get_db)):
+    ensure_genesis_workspace(db)
+    workspaces = db.query(Workspace).order_by(Workspace.updated_at.desc()).all()
+    return data([serialize_workspace(workspace) for workspace in workspaces])
+
+
+@router.post("/workspaces", status_code=201)
+def create_workspace(payload: WorkspaceInput, db: Session = Depends(get_db)):
+    workspace = Workspace(name=payload.name.strip(), description=payload.description)
+    db.add(workspace)
+    db.commit()
+    db.refresh(workspace)
+    return data(serialize_workspace(workspace))
+
+
+@router.get("/workspaces/{workspace_id}")
+def read_workspace(workspace_id: str, db: Session = Depends(get_db)):
+    return data(serialize_workspace(get_workspace(workspace_id, db)))
+
+
+@router.patch("/workspaces/{workspace_id}")
+def update_workspace(workspace_id: str, payload: WorkspaceInput, db: Session = Depends(get_db)):
+    workspace = get_workspace(workspace_id, db)
+    workspace.name = payload.name.strip()
+    workspace.description = payload.description
+    db.commit()
+    db.refresh(workspace)
+    return data(serialize_workspace(workspace))
+
+
+@router.get("/workspaces/{workspace_id}/overview")
+def read_overview(workspace_id: str, db: Session = Depends(get_db)):
+    return data(workspace_activity(db, get_workspace(workspace_id, db)))
+
+
+@router.get("/workspaces/{workspace_id}/conversations")
+def list_conversations(workspace_id: str, db: Session = Depends(get_db)):
+    get_workspace(workspace_id, db)
+    conversations = (
+        db.query(Conversation)
+        .filter_by(workspace_id=workspace_id)
+        .order_by(Conversation.updated_at.desc())
+        .all()
+    )
+    return data([serialize_conversation(conversation) for conversation in conversations])
+
+
+@router.post("/workspaces/{workspace_id}/conversations", status_code=201)
+def new_conversation(workspace_id: str, payload: ConversationInput, db: Session = Depends(get_db)):
+    get_workspace(workspace_id, db)
+    return data(serialize_conversation(create_conversation(db, workspace_id, payload.title)))
+
+
+@router.get("/workspaces/{workspace_id}/conversations/{conversation_id}")
+def read_conversation(workspace_id: str, conversation_id: str, db: Session = Depends(get_db)):
+    conversation = get_conversation(workspace_id, conversation_id, db)
+    messages = (
+        db.query(WorkspaceMessage)
+        .filter_by(conversation_id=conversation.id)
+        .order_by(WorkspaceMessage.created_at.asc())
+        .all()
+    )
+    return data({**serialize_conversation(conversation), "messages": [serialize_message(message) for message in messages]})
+
+
+@router.post("/workspaces/{workspace_id}/conversations/{conversation_id}/messages", status_code=201)
+def send_message(workspace_id: str, conversation_id: str, payload: MessageInput, db: Session = Depends(get_db)):
+    conversation = get_conversation(workspace_id, conversation_id, db)
+    user_message = WorkspaceMessage(conversation_id=conversation.id, role="user", content=payload.content.strip())
+    db.add(user_message)
+    db.commit()
+
+    previous_messages = (
+        db.query(WorkspaceMessage)
+        .filter_by(conversation_id=conversation.id)
+        .order_by(WorkspaceMessage.created_at.asc())
+        .limit(20)
+        .all()
+    )
+    context, citations = build_citations(workspace_id, user_message.content)
+    system = (
+        "Tu es Nova, l’assistant du Workspace TRIDENT GENESIS. Réponds en français. "
+        "Utilise prioritairement les connaissances fournies et cite les sources disponibles. "
+        f"\n\nConnaissances du Workspace :\n{context or 'Aucune connaissance indexée.'}"
+    )
+    conversation_input = [{"role": "system", "content": system}] + [
+        {"role": message.role, "content": message.content} for message in previous_messages
+    ]
+    try:
+        response = OpenAI(api_key=settings.OPENAI_API_KEY).responses.create(
+            model="gpt-4.1-mini", input=conversation_input
+        )
+        reply = response.output_text
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Le service IA est temporairement indisponible.") from exc
+
+    assistant_message = WorkspaceMessage(
+        conversation_id=conversation.id,
+        role="assistant",
+        content=reply,
+        citations_json=json.dumps(citations, ensure_ascii=False),
+    )
+    if conversation.title == "Nouvelle conversation":
+        conversation.title = user_message.content[:80]
+    db.add(assistant_message)
+    db.commit()
+    db.refresh(assistant_message)
+    return data(serialize_message(assistant_message))
+
+
+@router.get("/workspaces/{workspace_id}/documents")
+def list_documents(workspace_id: str, db: Session = Depends(get_db)):
+    get_workspace(workspace_id, db)
+    documents = db.query(WorkspaceDocument).filter_by(workspace_id=workspace_id).order_by(WorkspaceDocument.created_at.desc()).all()
+    return data([serialize_document(document) for document in documents])
+
+
+@router.post("/workspaces/{workspace_id}/documents", status_code=201)
+async def upload_document(workspace_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    get_workspace(workspace_id, db)
+    return data(serialize_document(await create_document(db, workspace_id, file)))
+
+
+@router.delete("/workspaces/{workspace_id}/documents/{document_id}")
+def remove_document(workspace_id: str, document_id: str, db: Session = Depends(get_db)):
+    document = db.get(WorkspaceDocument, document_id)
+    if not document or document.workspace_id != workspace_id:
+        raise HTTPException(status_code=404, detail="Document introuvable.")
+    delete_document(db, document)
+    return data({"id": document_id, "deleted": True})

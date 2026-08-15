@@ -1,92 +1,128 @@
-.layout{
-    display:flex;
-    width:100%;
-    height:100vh;
-}
-
-.main{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    overflow:hidden;
-}
-
-.topbar{
-
-    height:82px;
-
+.topbar-right{
     display:flex;
     align-items:center;
-    gap:18px;
-
-    padding:0 28px;
-
-    background:rgba(19,28,49,.78);
-
-    backdrop-filter:blur(18px);
-
-    border-bottom:1px solid rgba(255,255,255,.06);
-
-    box-shadow:var(--shadow);
-
+    gap:14px;
 }
 
-.logo{
+.search-box{
+    display:flex;
+    align-items:center;
+    gap:10px;
 
-    width:54px;
-    height:54px;
+    width:320px;
+    height:46px;
 
-    border-radius:16px;
+    padding:0 16px;
+
+    border-radius:14px;
+
+    background:rgba(255,255,255,.06);
+
+    border:1px solid rgba(255,255,255,.05);
+}
+
+.search-box input{
+    flex:1;
+    background:transparent;
+    color:var(--text);
+}
+
+.search-box input::placeholder{
+    color:var(--muted);
+}
+
+.icon-btn,
+.profile-btn{
+
+    width:46px;
+    height:46px;
 
     display:flex;
     align-items:center;
     justify-content:center;
 
-    font-size:30px;
+    border-radius:14px;
+
+    background:rgba(255,255,255,.05);
+
+    color:var(--text);
+
+}
+
+.icon-btn:hover,
+.profile-btn:hover{
+
+    transform:translateY(-2px);
+
+    background:rgba(255,255,255,.10);
+
+}
+
+@media(max-width:900px){
+
+.search-box{
+display:none;
+}
+
+}
+
+.workspace{
+    flex:1;
+    overflow:auto;
+    padding:30px;
+}
+
+.workspace-container{
+
+    max-width:1200px;
+
+    width:100%;
+
+    margin:auto;
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:24px;
+
+    min-height:100%;
+
+}
+
+@media(max-width:900px){
+
+.workspace{
+
+padding:18px;
+
+}
+
+.workspace-container{
+
+gap:18px;
+
+}
+
+}
+
+.main{
+
+    flex:1;
+
+    display:flex;
+
+    flex-direction:column;
+
+    min-width:0;
+
+    overflow:hidden;
 
     background:
-    linear-gradient(
-    135deg,
-    var(--primary),
-    var(--secondary)
-    );
-
-    box-shadow:
-    0 0 28px rgba(59,130,246,.45);
-
-}
-
-.topbar h1{
-
-    font-size:24px;
-    font-weight:700;
-
-}
-
-.topbar p{
-
-    color:var(--muted);
-
-    font-size:14px;
-
-    margin-top:4px;
-
-}
-
-@media (max-width:768px){
-
-    .topbar{
-
-        padding:18px;
-
-        height:auto;
-
-    }
-
-    .topbar h1{
-
-        font-size:20px;
-
-    }
+        radial-gradient(
+            circle at top,
+            rgba(59,130,246,.08),
+            transparent 45%
+        );
 
 }
