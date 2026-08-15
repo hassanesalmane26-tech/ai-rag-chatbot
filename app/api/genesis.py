@@ -1,19 +1,10 @@
 """Public Genesis API. All product resources are nested below Workspace."""
 
-import json
-
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from openai import OpenAI
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.conversations.service import (
-    build_citations,
-    create_conversation,
-    serialize_conversation,
-    serialize_message,
-)
-from app.core.config import settings
+from app.conversations.service import create_conversation, reply_to_conversation, serialize_conversation, serialize_message
 from app.database.database import get_db
 from app.database.genesis_models import Conversation, Workspace, WorkspaceDocument, WorkspaceMessage
 from app.knowledge.service import create_document, delete_document, serialize_document
@@ -110,7 +101,7 @@ def list_conversations(workspace_id: str, db: Session = Depends(get_db)):
     conversations = (
         db.query(Conversation)
         .filter_by(workspace_id=workspace_id)
-        .order_by(Conversation.updated_at.desc())
+        .order_by(Conversation.updated_at.desc(), Conversation.id.desc())
         .all()
     )
     return data([serialize_conversation(conversation) for conversation in conversations])
@@ -128,7 +119,7 @@ def read_conversation(workspace_id: str, conversation_id: str, db: Session = Dep
     messages = (
         db.query(WorkspaceMessage)
         .filter_by(conversation_id=conversation.id)
-        .order_by(WorkspaceMessage.created_at.asc())
+        .order_by(WorkspaceMessage.created_at.asc(), WorkspaceMessage.id.asc())
         .all()
     )
     return data({**serialize_conversation(conversation), "messages": [serialize_message(message) for message in messages]})
@@ -137,46 +128,13 @@ def read_conversation(workspace_id: str, conversation_id: str, db: Session = Dep
 @router.post("/workspaces/{workspace_id}/conversations/{conversation_id}/messages", status_code=201)
 def send_message(workspace_id: str, conversation_id: str, payload: MessageInput, db: Session = Depends(get_db)):
     conversation = get_conversation(workspace_id, conversation_id, db)
-    user_message = WorkspaceMessage(conversation_id=conversation.id, role="user", content=payload.content.strip())
-    db.add(user_message)
-    db.commit()
-
-    previous_messages = (
-        db.query(WorkspaceMessage)
-        .filter_by(conversation_id=conversation.id)
-        .order_by(WorkspaceMessage.created_at.asc())
-        .limit(20)
-        .all()
+    user_message, assistant_message = reply_to_conversation(
+        db, workspace_id, conversation, payload.content
     )
-    context, citations = build_citations(workspace_id, user_message.content)
-    system = (
-        "Tu es Nova, l’assistant du Workspace TRIDENT GENESIS. Réponds en français. "
-        "Utilise prioritairement les connaissances fournies et cite les sources disponibles. "
-        f"\n\nConnaissances du Workspace :\n{context or 'Aucune connaissance indexée.'}"
-    )
-    conversation_input = [{"role": "system", "content": system}] + [
-        {"role": message.role, "content": message.content} for message in previous_messages
-    ]
-    try:
-        response = OpenAI(api_key=settings.OPENAI_API_KEY).responses.create(
-            model="gpt-4.1-mini", input=conversation_input
-        )
-        reply = response.output_text
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Le service IA est temporairement indisponible.") from exc
-
-    assistant_message = WorkspaceMessage(
-        conversation_id=conversation.id,
-        role="assistant",
-        content=reply,
-        citations_json=json.dumps(citations, ensure_ascii=False),
-    )
-    if conversation.title == "Nouvelle conversation":
-        conversation.title = user_message.content[:80]
-    db.add(assistant_message)
-    db.commit()
-    db.refresh(assistant_message)
-    return data(serialize_message(assistant_message))
+    return data({
+        **serialize_message(assistant_message),
+        "user_message": serialize_message(user_message),
+    })
 
 
 @router.get("/workspaces/{workspace_id}/documents")

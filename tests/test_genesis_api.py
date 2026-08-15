@@ -1,7 +1,10 @@
 import asyncio
 import io
 import os
+import socket
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -11,6 +14,7 @@ os.environ["DATABASE_URL"] = f"sqlite:///{Path(tempfile.gettempdir()) / 'trident
 os.environ["OPENAI_API_KEY"] = "test-key"
 
 import httpx
+import uvicorn
 from fastapi import UploadFile
 from langchain_core.documents import Document
 
@@ -39,15 +43,30 @@ class InMemoryVectorStore:
 
 
 class AppClient:
-    """Synchronous test adapter over the installed async HTTPX ASGI transport."""
+    """Exercise the ASGI application through the same Uvicorn boundary as runtime."""
 
-    async def _request(self, method, url, **kwargs):
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-            return await client.request(method, url, **kwargs)
+    def __init__(self):
+        listener = socket.socket()
+        listener.bind(("127.0.0.1", 0))
+        self.port = listener.getsockname()[1]
+        listener.close()
+        config = uvicorn.Config(app, host="127.0.0.1", port=self.port, log_level="error")
+        self.server = uvicorn.Server(config)
+        self.thread = threading.Thread(target=self.server.run, daemon=True)
+        self.thread.start()
+        deadline = time.monotonic() + 10
+        while not self.server.started and self.thread.is_alive() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        if not self.server.started:
+            raise RuntimeError("Le serveur de test Uvicorn n'a pas démarré.")
+        self.client = httpx.Client(
+            base_url=f"http://127.0.0.1:{self.port}",
+            timeout=30,
+            limits=httpx.Limits(max_keepalive_connections=0),
+        )
 
     def request(self, method, url, **kwargs):
-        return asyncio.run(self._request(method, url, **kwargs))
+        return self.client.request(method, url, **kwargs)
 
     def get(self, url, **kwargs):
         return self.request("GET", url, **kwargs)
@@ -58,11 +77,20 @@ class AppClient:
     def patch(self, url, **kwargs):
         return self.request("PATCH", url, **kwargs)
 
+    def close(self):
+        self.client.close()
+        self.server.should_exit = True
+        self.thread.join(timeout=10)
+
 
 class GenesisApiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.client = AppClient()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.client.close()
 
     def setUp(self):
         Base.metadata.drop_all(bind=engine)
@@ -131,15 +159,58 @@ class GenesisApiTests(unittest.TestCase):
         citations = [{"document_id": "doc-1", "document_name": "guide.txt", "excerpt": "TRIDENT"}]
         provider = MagicMock()
         provider.return_value.responses.create.return_value.output_text = "Réponse ancrée."
-        with patch("app.api.genesis.build_citations", return_value=("Contexte", citations)), patch("app.api.genesis.OpenAI", provider):
+        with patch("app.conversations.service.build_citations", return_value=("Contexte", citations)), patch("app.conversations.service.OpenAI", provider):
             response = self.client.post(
                 f"/v1/workspaces/{workspace['id']}/conversations/{conversation['id']}/messages",
                 json={"content": "Que sait ce Workspace ?"},
             )
         self.assertEqual(response.status_code, 201, response.text)
         self.assertEqual(response.json()["data"]["citations"], citations)
+        self.assertEqual(response.json()["data"]["user_message"]["content"], "Que sait ce Workspace ?")
+        self.assertEqual(response.json()["data"]["user_message"]["role"], "user")
+        self.assertEqual(response.json()["data"]["role"], "assistant")
         detail = self.client.get(f"/v1/workspaces/{workspace['id']}/conversations/{conversation['id']}")
         self.assertEqual([message["role"] for message in detail.json()["data"]["messages"]], ["user", "assistant"])
+
+    def test_message_rejects_blank_content_and_cross_workspace_access(self):
+        first, second = self.workspace("Premier"), self.workspace("Second")
+        conversation = self.client.post(f"/v1/workspaces/{first['id']}/conversations", json={}).json()["data"]
+        blank = self.client.post(
+            f"/v1/workspaces/{first['id']}/conversations/{conversation['id']}/messages",
+            json={"content": "   "},
+        )
+        self.assertEqual(blank.status_code, 422, blank.text)
+        denied = self.client.post(
+            f"/v1/workspaces/{second['id']}/conversations/{conversation['id']}/messages",
+            json={"content": "Interdit"},
+        )
+        self.assertEqual(denied.status_code, 404, denied.text)
+
+    def test_provider_failure_keeps_user_message_in_workspace_history(self):
+        workspace = self.workspace()
+        conversation = self.client.post(f"/v1/workspaces/{workspace['id']}/conversations", json={}).json()["data"]
+        with patch("app.conversations.service.OpenAI", side_effect=RuntimeError("offline")):
+            failed = self.client.post(
+                f"/v1/workspaces/{workspace['id']}/conversations/{conversation['id']}/messages",
+                json={"content": "Message durable"},
+            )
+        self.assertEqual(failed.status_code, 503, failed.text)
+        detail = self.client.get(f"/v1/workspaces/{workspace['id']}/conversations/{conversation['id']}")
+        self.assertEqual([message["content"] for message in detail.json()["data"]["messages"]], ["Message durable"])
+
+    def test_rag_failure_is_controlled_and_keeps_user_message(self):
+        workspace = self.workspace()
+        conversation = self.client.post(f"/v1/workspaces/{workspace['id']}/conversations", json={}).json()["data"]
+        with patch("app.conversations.service.build_citations", side_effect=RuntimeError("index offline")):
+            failed = self.client.post(
+                f"/v1/workspaces/{workspace['id']}/conversations/{conversation['id']}/messages",
+                json={"content": "Question durable"},
+            )
+        self.assertEqual(failed.status_code, 503, failed.text)
+        self.assertEqual(failed.json()["error"]["code"], "DEPENDENCY_UNAVAILABLE")
+        self.assertNotIn("index offline", failed.text)
+        detail = self.client.get(f"/v1/workspaces/{workspace['id']}/conversations/{conversation['id']}")
+        self.assertEqual([message["content"] for message in detail.json()["data"]["messages"]], ["Question durable"])
 
     def test_document_upload_rejects_unsupported_type_and_wrong_workspace_cannot_see_metadata(self):
         first, second = self.workspace("Premier"), self.workspace("Second")
@@ -168,7 +239,7 @@ class GenesisApiTests(unittest.TestCase):
         vector = InMemoryVectorStore()
         provider = MagicMock()
         provider.return_value.responses.create.return_value.output_text = "TRIDENT est un AI Operating System."
-        with tempfile.TemporaryDirectory() as tempdir, patch("app.knowledge.service.DOCUMENTS_ROOT", Path(tempdir)), patch("app.knowledge.service.vectorstore", vector), patch("app.rag.search.vectorstore", vector), patch("app.api.genesis.OpenAI", provider):
+        with tempfile.TemporaryDirectory() as tempdir, patch("app.knowledge.service.DOCUMENTS_ROOT", Path(tempdir)), patch("app.knowledge.service.vectorstore", vector), patch("app.rag.search.vectorstore", vector), patch("app.conversations.service.OpenAI", provider):
             uploaded = self.client.post(
                 f"/v1/workspaces/{workspace['id']}/documents",
                 files={"file": ("vision.txt", b"TRIDENT est un AI Operating System centre sur le Workspace.", "text/plain")},
