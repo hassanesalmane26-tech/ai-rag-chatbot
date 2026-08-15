@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 os.environ["DATABASE_URL"] = f"sqlite:///{Path(tempfile.gettempdir()) / 'trident_genesis_tests.sqlite'}"
 os.environ["OPENAI_API_KEY"] = "test-key"
 
-from fastapi.testclient import TestClient
+import httpx
 from fastapi import UploadFile
 from langchain_core.documents import Document
 
@@ -38,10 +38,31 @@ class InMemoryVectorStore:
         return [(doc, 1.0) for doc in filtered[:k]]
 
 
+class AppClient:
+    """Synchronous test adapter over the installed async HTTPX ASGI transport."""
+
+    async def _request(self, method, url, **kwargs):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            return await client.request(method, url, **kwargs)
+
+    def request(self, method, url, **kwargs):
+        return asyncio.run(self._request(method, url, **kwargs))
+
+    def get(self, url, **kwargs):
+        return self.request("GET", url, **kwargs)
+
+    def post(self, url, **kwargs):
+        return self.request("POST", url, **kwargs)
+
+    def patch(self, url, **kwargs):
+        return self.request("PATCH", url, **kwargs)
+
+
 class GenesisApiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.client = TestClient(app)
+        cls.client = AppClient()
 
     def setUp(self):
         Base.metadata.drop_all(bind=engine)
@@ -59,6 +80,39 @@ class GenesisApiTests(unittest.TestCase):
         overview = self.client.get(f"/v1/workspaces/{workspace['id']}/overview")
         self.assertEqual(overview.status_code, 200, overview.text)
         self.assertEqual(overview.json()["data"]["metrics"], {"conversations": 0, "documents": 0, "messages": 0})
+
+    def test_workspace_identity_is_stable_and_can_be_read(self):
+        workspace = self.workspace("Identité durable")
+        fetched = self.client.get(f"/v1/workspaces/{workspace['id']}")
+        self.assertEqual(fetched.status_code, 200, fetched.text)
+        self.assertEqual(fetched.json()["data"]["id"], workspace["id"])
+        listed = self.client.get("/v1/workspaces")
+        self.assertEqual(listed.status_code, 200, listed.text)
+        self.assertIn(workspace["id"], [item["id"] for item in listed.json()["data"]])
+
+    def test_workspace_can_be_renamed_without_losing_description(self):
+        created = self.client.post(
+            "/v1/workspaces", json={"name": "Avant", "description": "Description durable"}
+        )
+        self.assertEqual(created.status_code, 201, created.text)
+        workspace = created.json()["data"]
+        updated = self.client.patch(
+            f"/v1/workspaces/{workspace['id']}", json={"name": "Après"}
+        )
+        self.assertEqual(updated.status_code, 200, updated.text)
+        self.assertEqual(updated.json()["data"]["name"], "Après")
+        self.assertEqual(updated.json()["data"]["description"], "Description durable")
+
+    def test_workspace_update_rejects_invalid_or_unknown_workspaces(self):
+        workspace = self.workspace()
+        invalid = self.client.patch(f"/v1/workspaces/{workspace['id']}", json={"name": "   "})
+        self.assertEqual(invalid.status_code, 422, invalid.text)
+        empty = self.client.patch(f"/v1/workspaces/{workspace['id']}", json={})
+        self.assertEqual(empty.status_code, 422, empty.text)
+        missing = self.client.get("/v1/workspaces/not-a-workspace")
+        self.assertEqual(missing.status_code, 404, missing.text)
+        unknown_update = self.client.patch("/v1/workspaces/not-a-workspace", json={"name": "Inconnu"})
+        self.assertEqual(unknown_update.status_code, 404, unknown_update.text)
 
     def test_conversations_and_messages_are_isolated_by_workspace(self):
         first, second = self.workspace("Premier"), self.workspace("Second")

@@ -22,8 +22,13 @@ from app.workspaces.service import ensure_genesis_workspace, serialize_workspace
 router = APIRouter(prefix="/v1", tags=["Genesis"])
 
 
-class WorkspaceInput(BaseModel):
+class WorkspaceCreateInput(BaseModel):
     name: str = Field(min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=1000)
+
+
+class WorkspaceUpdateInput(BaseModel):
+    name: str | None = Field(default=None, max_length=120)
     description: str | None = Field(default=None, max_length=1000)
 
 
@@ -61,8 +66,11 @@ def list_workspaces(db: Session = Depends(get_db)):
 
 
 @router.post("/workspaces", status_code=201)
-def create_workspace(payload: WorkspaceInput, db: Session = Depends(get_db)):
-    workspace = Workspace(name=payload.name.strip(), description=payload.description)
+def create_workspace(payload: WorkspaceCreateInput, db: Session = Depends(get_db)):
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="Le nom du Workspace est requis.")
+    workspace = Workspace(name=name, description=payload.description)
     db.add(workspace)
     db.commit()
     db.refresh(workspace)
@@ -75,10 +83,17 @@ def read_workspace(workspace_id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/workspaces/{workspace_id}")
-def update_workspace(workspace_id: str, payload: WorkspaceInput, db: Session = Depends(get_db)):
+def update_workspace(workspace_id: str, payload: WorkspaceUpdateInput, db: Session = Depends(get_db)):
     workspace = get_workspace(workspace_id, db)
-    workspace.name = payload.name.strip()
-    workspace.description = payload.description
+    fields = payload.model_fields_set
+    if not fields:
+        raise HTTPException(status_code=422, detail="Aucune modification de Workspace fournie.")
+    if "name" in fields:
+        if payload.name is None or not payload.name.strip():
+            raise HTTPException(status_code=422, detail="Le nom du Workspace est requis.")
+        workspace.name = payload.name.strip()
+    if "description" in fields:
+        workspace.description = payload.description
     db.commit()
     db.refresh(workspace)
     return data(serialize_workspace(workspace))

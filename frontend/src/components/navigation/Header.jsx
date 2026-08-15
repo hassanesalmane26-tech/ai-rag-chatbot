@@ -1,5 +1,6 @@
 import {
   Bell,
+  PanelsTopLeft,
   Search,
   Sparkles,
   UserCircle2,
@@ -9,6 +10,7 @@ import IconButton from "../ui/IconButton";
 
 export default function Header({
   title = "TRIDENT",
+  onOpenWorkspaces,
 }) {
   return (
     <header className="topbar">
@@ -19,6 +21,10 @@ export default function Header({
           <h1>{title}</h1>
           <p>WORKSPACE CORE / GENESIS</p>
         </div>
+
+        <IconButton className="topbar-workspace-action" aria-label="Ouvrir les Workspaces" title="Workspaces" onClick={onOpenWorkspaces}>
+          <PanelsTopLeft size={18} />
+        </IconButton>
       </div>
 
       <div className="topbar-right">

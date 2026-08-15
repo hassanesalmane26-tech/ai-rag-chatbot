@@ -11,6 +11,10 @@ export const listWorkspaces = () => request("/workspaces");
 export const createWorkspace = (payload) => request("/workspaces", {
   method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
 });
+export const getWorkspace = (workspaceId) => request(`/workspaces/${workspaceId}`);
+export const updateWorkspace = (workspaceId, payload) => request(`/workspaces/${workspaceId}`, {
+  method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+});
 export const getOverview = (workspaceId) => request(`/workspaces/${workspaceId}/overview`);
 export const listConversations = (workspaceId) => request(`/workspaces/${workspaceId}/conversations`);
 export const createConversation = (workspaceId, title) => request(`/workspaces/${workspaceId}/conversations`, {
