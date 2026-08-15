@@ -4,20 +4,19 @@ import {
   Sparkles,
   UserCircle2,
 } from "lucide-react";
+import TridentMark from "../visual/TridentMark";
 
 export default function Header({
-  title = "TRIDENT AI",
+  title = "TRIDENT",
 }) {
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <div className="logo">
-          🔱
-        </div>
+        <div className="logo"><TridentMark label="TRIDENT GENESIS" /></div>
 
         <div>
           <h1>{title}</h1>
-          <p>AI Workspace • RAG • Agents • Knowledge</p>
+          <p>WORKSPACE CORE / GENESIS</p>
         </div>
       </div>
 

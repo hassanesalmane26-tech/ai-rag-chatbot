@@ -1,4 +1,4 @@
-import { useWorkspaceContext } from "../../../context/WorkspaceContext";
+import useWorkspaceContext from "../../../hooks/useWorkspaceContext";
 import WorkspaceHome from "../../home/WorkspaceHome";
 import ConversationsView from "../../chat/ConversationsView";
 import DocumentsView from "../../documents/DocumentsView";

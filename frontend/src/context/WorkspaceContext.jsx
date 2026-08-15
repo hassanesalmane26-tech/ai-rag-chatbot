@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createWorkspace as createWorkspaceRequest, listWorkspaces } from "../services/api";
+import { WorkspaceContext } from "./workspaceContext";
 
-const WorkspaceContext = createContext(null);
 
 export function WorkspaceProvider({ children }) {
   const [workspaces, setWorkspaces] = useState([]);
@@ -32,10 +32,4 @@ export function WorkspaceProvider({ children }) {
 
   const activeWorkspace = useMemo(() => workspaces.find((item) => item.id === activeWorkspaceId) ?? null, [workspaces, activeWorkspaceId]);
   return <WorkspaceContext.Provider value={{ workspaces, activeWorkspace, activeWorkspaceId, setActiveWorkspaceId, activeView, setActiveView, createWorkspace, refreshWorkspaces, loading, error }}>{children}</WorkspaceContext.Provider>;
-}
-
-export function useWorkspaceContext() {
-  const value = useContext(WorkspaceContext);
-  if (!value) throw new Error("useWorkspaceContext must be used inside WorkspaceProvider");
-  return value;
 }

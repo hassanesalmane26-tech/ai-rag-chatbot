@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { MessageSquarePlus, Send } from "lucide-react";
-import { useWorkspaceContext } from "../../context/WorkspaceContext";
+import useWorkspaceContext from "../../hooks/useWorkspaceContext";
 import { createConversation, getConversation, listConversations, sendWorkspaceMessage } from "../../services/api";
 
 export default function ConversationsView() {

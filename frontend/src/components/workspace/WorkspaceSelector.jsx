@@ -1,4 +1,4 @@
-import { useWorkspaceContext } from "../../context/WorkspaceContext";
+import useWorkspaceContext from "../../hooks/useWorkspaceContext";
 
 export default function WorkspaceSelector() {
   const { workspaces, activeWorkspaceId, setActiveWorkspaceId } = useWorkspaceContext();

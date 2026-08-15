@@ -8,9 +8,8 @@ import WorkspaceRouter from "./features/workspace/components/WorkspaceRouter";
 
 
 function WorkspaceContent() {
-
   return (
-    <Workspace title="Workspace Intelligent">
+    <Workspace>
       <WorkspaceRouter />
     </Workspace>
   );

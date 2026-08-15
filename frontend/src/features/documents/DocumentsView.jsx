@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { FileText, Trash2, Upload } from "lucide-react";
-import { useWorkspaceContext } from "../../context/WorkspaceContext";
+import useWorkspaceContext from "../../hooks/useWorkspaceContext";
 import { deleteDocument, listDocuments, uploadDocument } from "../../services/api";
 
 export default function DocumentsView() {

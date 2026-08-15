@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { BookOpen, House, MessageSquarePlus, MessagesSquare } from "lucide-react";
-import { useWorkspaceContext } from "../context/WorkspaceContext";
+import useWorkspaceContext from "../hooks/useWorkspaceContext";
 import WorkspaceSelector from "./workspace/WorkspaceSelector";
+import TridentMark from "./visual/TridentMark";
 
 const items = [
   ["home", "Accueil", House],
@@ -15,7 +16,7 @@ export default function Sidebar() {
   const [name, setName] = useState("");
   async function submit(event) { event.preventDefault(); if (!name.trim()) return; await createWorkspace(name.trim()); setName(""); setCreating(false); }
   return <aside className="sidebar">
-    <div className="sidebar-brand"><div className="brand-icon">🔱</div><div><h2>TRIDENT</h2><span>GENESIS</span></div></div>
+    <div className="sidebar-brand"><div className="brand-icon"><TridentMark /></div><div><h2>TRIDENT</h2><span>GENESIS / WORKSPACE OS</span></div></div>
     <nav className="sidebar-menu">{items.map(([id, label, Icon]) => <button key={id} className={`menu-item ${activeView === id ? "active" : ""}`} onClick={() => setActiveView(id)}><Icon size={17} />{label}</button>)}</nav>
     <div className="sidebar-documents"><WorkspaceSelector /></div>
     <div className="sidebar-create">{creating ? <form onSubmit={submit}><input aria-label="Nom du nouveau Workspace" autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Nom du Workspace" /><button type="submit">Créer</button></form> : <button onClick={() => setCreating(true)}><MessageSquarePlus size={16} /> Nouveau Workspace</button>}</div>
