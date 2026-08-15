@@ -1,4 +1,6 @@
 @import "./styles/theme.css";
+@import "./styles/motion.css";
+@import "./styles/primitives.css";
 @import "./styles/layout.css";
 @import "./styles/sidebar.css";
 @import "./styles/animations.css";

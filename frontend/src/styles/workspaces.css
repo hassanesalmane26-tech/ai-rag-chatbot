@@ -65,3 +65,17 @@
     font-size: clamp(29px, 8.6vw, 34px);
   }
 }
+
+/* Preserve primary/secondary CTA hierarchy inside the Workspace hero. */
+.hero-actions .ds-button--secondary {
+  border-color: var(--control-secondary-border);
+  background: var(--control-secondary-fill);
+  color: var(--color-text-primary);
+  box-shadow: var(--glow-cyan);
+}
+
+.hero-actions .ds-button--secondary:hover:not(:disabled) {
+  border-color: var(--border-emphasis);
+  background: rgba(101, 243, 239, .12);
+  box-shadow: 0 0 36px rgba(101, 243, 239, .28);
+}

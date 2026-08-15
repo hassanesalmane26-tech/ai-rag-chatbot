@@ -5,6 +5,7 @@ import {
   UserCircle2,
 } from "lucide-react";
 import TridentMark from "../visual/TridentMark";
+import IconButton from "../ui/IconButton";
 
 export default function Header({
   title = "TRIDENT",
@@ -32,17 +33,17 @@ export default function Header({
           />
         </div>
 
-        <button className="icon-btn" aria-label="Assistant IA indisponible dans Genesis" title="Indisponible dans Genesis" disabled>
+        <IconButton className="icon-btn" aria-label="Assistant IA indisponible dans Genesis" title="Indisponible dans Genesis" disabled>
           <Sparkles size={18} />
-        </button>
+        </IconButton>
 
-        <button className="icon-btn" aria-label="Notifications indisponibles dans Genesis" title="Indisponible dans Genesis" disabled>
+        <IconButton className="icon-btn" aria-label="Notifications indisponibles dans Genesis" title="Indisponible dans Genesis" disabled>
           <Bell size={18} />
-        </button>
+        </IconButton>
 
-        <button className="profile-btn" aria-label="Profil indisponible dans Genesis" title="Indisponible dans Genesis" disabled>
+        <IconButton className="profile-btn" aria-label="Profil indisponible dans Genesis" title="Indisponible dans Genesis" disabled>
           <UserCircle2 size={22} />
-        </button>
+        </IconButton>
       </div>
     </header>
   );

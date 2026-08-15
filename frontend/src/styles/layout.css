@@ -8,3 +8,7 @@
 .workspace { position: relative; z-index: 1; flex: 1; overflow: auto; padding: var(--space-6); }.workspace-container { width: 100%; max-width: 1320px; min-height: 100%; margin: auto; }
 @media (max-width: 900px) { .topbar { padding: var(--space-3) var(--space-4); }.search-box, .topbar-right .icon-btn { display:none; }.workspace { padding: var(--space-4); } }
 @media (max-width: 760px) { .main-content { padding-bottom:78px; }.topbar { min-height:62px; padding:10px 16px; background:rgba(5,20,48,.42); }.topbar-left { gap:10px; }.logo { width:36px; height:36px; border-radius:12px; }.topbar h1 { font-size:12px; letter-spacing:.12em; }.topbar p { max-width:230px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; }.topbar-right { display:none; }.workspace { overflow:visible; padding:16px 14px 22px; }.workspace-container { min-height:auto; } }
+
+/* Shared layout token bindings. */
+.workspace { z-index:var(--z-content); }.workspace-container { max-width:var(--layout-content-max-width); }.search-box,.icon-btn,.profile-btn { min-height:var(--control-height-sm); }
+@media (max-width:760px) { .main-content { padding-bottom:var(--layout-bottom-nav-offset); }.workspace { padding-inline:var(--layout-mobile-gutter); }.topbar h1 { font-size:var(--font-size-meta); }.topbar p { font-size:var(--font-size-label); } }

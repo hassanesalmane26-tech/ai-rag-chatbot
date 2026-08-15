@@ -1,0 +1,125 @@
+:root {
+  /* Reference palette */
+  --ref-ink-950: #030713;
+  --ref-ink-900: #07101f;
+  --ref-ink-800: #0b1730;
+  --ref-electric-500: #5b8cff;
+  --ref-electric-300: #91b5ff;
+  --ref-cyan-400: #65f3ef;
+  --ref-violet-400: #aa7cff;
+  --ref-white: #f4f8ff;
+
+  /* Semantic color and surface roles */
+  --color-bg-canvas: var(--ref-ink-950);
+  --color-bg-atmosphere: var(--ref-ink-900);
+  --color-text-primary: var(--ref-white);
+  --color-text-secondary: #9dabc6;
+  --color-text-tertiary: #71809e;
+  --color-accent-primary: var(--ref-electric-500);
+  --color-accent-soft: var(--ref-electric-300);
+  --color-accent-cyan: var(--ref-cyan-400);
+  --color-accent-violet: var(--ref-violet-400);
+  --color-status-success: #58e7ad;
+  --color-status-danger: #ff7794;
+  --surface-base: rgba(7, 20, 47, 0.7);
+  --surface-glass: rgba(13, 30, 61, 0.46);
+  --surface-glass-elevated: rgba(12, 42, 91, 0.42);
+  --surface-interactive: rgba(255, 255, 255, 0.075);
+  --surface-selected: rgba(91, 140, 255, 0.16);
+  --surface-overlay: rgba(8, 23, 53, 0.3);
+  --border-subtle: rgba(196, 230, 255, 0.13);
+  --border-default: rgba(110, 221, 255, 0.3);
+  --border-emphasis: rgba(139, 231, 255, 0.46);
+  --border-focus: var(--color-accent-cyan);
+  --control-primary-fill: linear-gradient(135deg, rgba(132, 180, 255, .97), rgba(108, 241, 237, .82));
+  --control-primary-text: #06101f;
+  --control-primary-border: rgba(101, 243, 239, .42);
+  --control-secondary-fill: rgba(255, 255, 255, .075);
+  --control-secondary-border: rgba(176, 220, 255, .22);
+
+  /* Compatibility aliases retained for feature composition. */
+  --ink-950: var(--ref-ink-950);
+  --ink-900: var(--ref-ink-900);
+  --ink-800: var(--ref-ink-800);
+  --electric: var(--color-accent-primary);
+  --electric-soft: var(--color-accent-soft);
+  --cyan: var(--color-accent-cyan);
+  --violet: var(--color-accent-violet);
+  --text: var(--color-text-primary);
+  --text-muted: var(--color-text-secondary);
+  --text-dim: var(--color-text-tertiary);
+  --success: var(--color-status-success);
+  --danger: var(--color-status-danger);
+  --surface-glass-strong: var(--surface-base);
+  --surface-highlight: var(--surface-interactive);
+  --surface-veil: var(--surface-overlay);
+  --surface-core: var(--surface-glass-elevated);
+  --line-subtle: var(--border-subtle);
+  --line-bright: var(--border-default);
+  --line-luminous: var(--border-emphasis);
+
+  /* Shape, spacing, layout and layers */
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 26px;
+  --radius-xl: 34px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --layout-sidebar-width: 286px;
+  --layout-content-max-width: 1320px;
+  --layout-mobile-gutter: 14px;
+  --layout-bottom-nav-height: 72px;
+  --layout-bottom-nav-offset: calc(var(--layout-bottom-nav-height) + env(safe-area-inset-bottom) + var(--space-5));
+  --control-height-sm: 42px;
+  --control-height-md: 44px;
+  --control-height-touch: 48px;
+  --icon-size-sm: 16px;
+  --icon-size-md: 18px;
+  --icon-size-lg: 22px;
+  --z-background: 0;
+  --z-content: 1;
+  --z-header: 2;
+  --z-navigation: 10;
+  --z-overlay: 20;
+
+  /* Typography */
+  --font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-size-label: 11px;
+  --font-size-meta: 12px;
+  --font-size-body-sm: 14px;
+  --font-size-body: 16px;
+  --font-size-body-lg: 18px;
+  --font-size-heading-sm: 20px;
+  --font-size-heading-md: 28px;
+  --font-size-display: clamp(32px, 5vw, 62px);
+  --line-height-tight: 1.04;
+  --line-height-heading: 1.2;
+  --line-height-body: 1.6;
+  --tracking-label: 0.16em;
+
+  /* Elevation and motion */
+  --blur-sm: 12px;
+  --blur-md: 22px;
+  --blur-lg: 34px;
+  --shadow-float: 0 20px 55px rgba(0, 0, 0, 0.27);
+  --shadow-glow: 0 0 0 1px rgba(116, 224, 255, 0.08), 0 18px 60px rgba(8, 30, 79, 0.42);
+  --shadow-panel: 0 22px 70px rgba(0, 8, 32, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.075);
+  --glow-electric: 0 0 28px rgba(91, 140, 255, 0.4);
+  --glow-cyan: 0 0 32px rgba(101, 243, 239, 0.25);
+  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: var(--ease-standard);
+  --motion-fast: 180ms;
+  --motion-base: 320ms;
+  --motion-atmosphere: 12s;
+  --motion-atmosphere-long: 24s;
+  --motion-atmosphere-xlong: 32s;
+  --duration-fast: var(--motion-fast);
+  --duration-base: var(--motion-base);
+  --duration-slow: var(--motion-atmosphere);
+}
