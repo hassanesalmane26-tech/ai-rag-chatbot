@@ -13,7 +13,12 @@ from app.knowledge.service import (
     retry_document,
     serialize_document,
 )
-from app.workspaces.service import ensure_genesis_workspace, serialize_workspace, workspace_activity
+from app.workspaces.service import (
+    create_genesis_workspace,
+    ensure_genesis_workspace,
+    serialize_workspace,
+    workspace_activity,
+)
 
 router = APIRouter(prefix="/v1", tags=["Genesis"])
 
@@ -66,10 +71,7 @@ def create_workspace(payload: WorkspaceCreateInput, db: Session = Depends(get_db
     name = payload.name.strip()
     if not name:
         raise HTTPException(status_code=422, detail="Le nom du Workspace est requis.")
-    workspace = Workspace(name=name, description=payload.description)
-    db.add(workspace)
-    db.commit()
-    db.refresh(workspace)
+    workspace = create_genesis_workspace(db, name, payload.description)
     return data(serialize_workspace(workspace))
 
 

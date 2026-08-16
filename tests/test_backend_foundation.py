@@ -21,6 +21,7 @@ from app.database import genesis_models, models  # noqa: F401
 from app.database.schema import (
     BASELINE_REVISION,
     EXPECTED_COLUMNS,
+    GENESIS_HEAD_REVISION,
     HEAD_REVISION,
     verify_genesis_schema,
 )
@@ -162,3 +163,87 @@ class MigrationAdoptionTests(unittest.TestCase):
                 self.assertIn("missing table: workspaces", result.issues)
             finally:
                 engine.dispose()
+
+    def test_ai1_adopts_genesis_workspaces_without_replacing_identity(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            database_url = f"sqlite:///{Path(tempdir) / 'ai1-adoption.sqlite'}"
+            config = self.alembic_config(database_url)
+            command.upgrade(config, GENESIS_HEAD_REVISION)
+            engine = create_engine(database_url)
+            workspace_id = "11111111-1111-4111-8111-111111111111"
+            conversation_id = "22222222-2222-4222-8222-222222222222"
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "INSERT INTO workspaces (id, name) VALUES (:id, :name)"
+                    ),
+                    {"id": workspace_id, "name": "Preserved Genesis"},
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO conversations (id, workspace_id, title) "
+                        "VALUES (:id, :workspace_id, :title)"
+                    ),
+                    {
+                        "id": conversation_id,
+                        "workspace_id": workspace_id,
+                        "title": "Preserved conversation",
+                    },
+                )
+            engine.dispose()
+
+            command.upgrade(config, "head")
+            checked = create_engine(database_url)
+            try:
+                with checked.connect() as connection:
+                    adopted = connection.execute(
+                        text(
+                            "SELECT id, organization_id FROM workspaces WHERE id = :id"
+                        ),
+                        {"id": workspace_id},
+                    ).one()
+                    self.assertEqual(adopted.id, workspace_id)
+                    self.assertIsNotNone(adopted.organization_id)
+                    self.assertEqual(
+                        connection.execute(text("SELECT count(*) FROM organizations")).scalar_one(),
+                        1,
+                    )
+                    self.assertEqual(
+                        connection.execute(text("SELECT ownership_state FROM organizations")).scalar_one(),
+                        "legacy_unclaimed",
+                    )
+                    self.assertEqual(
+                        connection.execute(text("SELECT count(*) FROM users")).scalar_one(), 0
+                    )
+                    self.assertEqual(
+                        connection.execute(text("SELECT count(*) FROM memberships")).scalar_one(), 0
+                    )
+                    self.assertEqual(
+                        connection.execute(
+                            text("SELECT workspace_id FROM conversations WHERE id = :id"),
+                            {"id": conversation_id},
+                        ).scalar_one(),
+                        workspace_id,
+                    )
+                self.assertTrue(verify_genesis_schema(checked).compatible)
+            finally:
+                checked.dispose()
+
+            with self.assertRaisesRegex(RuntimeError, "non-downgradable"):
+                command.downgrade(config, GENESIS_HEAD_REVISION)
+            still_current = create_engine(database_url)
+            try:
+                with still_current.connect() as connection:
+                    self.assertEqual(
+                        connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one(),
+                        HEAD_REVISION,
+                    )
+                    self.assertEqual(
+                        connection.execute(
+                            text("SELECT count(*) FROM workspaces WHERE id = :id"),
+                            {"id": workspace_id},
+                        ).scalar_one(),
+                        1,
+                    )
+            finally:
+                still_current.dispose()

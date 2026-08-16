@@ -26,6 +26,7 @@ are updated before significant implementation changes are made.
 | [Genesis v1.0.0 freeze](releases/trident-genesis-v1.0.0.md) | Immutable baseline and release boundary. |
 | [TRIDENT AI transition](architecture/trident-ai-transition.md) | Additive Identity and edition evolution architecture. |
 | [Sprint AI-0](phases/sprint-ai-0.md) | Freeze, publication and security-preparation record. |
+| [Sprint AI-1](phases/sprint-ai-1.md) | Provider-neutral Identity and staged Workspace tenancy. |
 | [AI-0 edge hardening plan](operations/ai0-edge-hardening.md) | Production artifact, headers, TLS and supervisor transition. |
 
 ## Documentation rule

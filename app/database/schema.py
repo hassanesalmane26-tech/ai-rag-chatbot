@@ -7,20 +7,36 @@ from sqlalchemy.engine import Engine
 
 from app.database.database import Base
 from app.database import genesis_models, models  # noqa: F401 - register metadata
+from app.identity import models as identity_models  # noqa: F401 - register metadata
+from app.tenancy import models as tenancy_models  # noqa: F401 - register metadata
 
 BASELINE_REVISION = "0001_genesis_baseline"
-HEAD_REVISION = "0003_workspace_memory"
+GENESIS_HEAD_REVISION = "0003_workspace_memory"
+HEAD_REVISION = "0004_identity_tenancy"
 CURRENT_COLUMNS = {
     table.name: {column.name for column in table.columns}
     for table in Base.metadata.sorted_tables
 }
+GENESIS_TABLE_NAMES = {
+    "chat_messages",
+    "workspaces",
+    "conversations",
+    "workspace_messages",
+    "workspace_documents",
+    "workspace_memories",
+}
+GENESIS_HEAD_COLUMNS = {
+    name: columns - ({"organization_id"} if name == "workspaces" else set())
+    for name, columns in CURRENT_COLUMNS.items()
+    if name in GENESIS_TABLE_NAMES
+}
 BASELINE_COLUMNS = {
-    **{name: columns for name, columns in CURRENT_COLUMNS.items() if name != "workspace_memories"},
-    "workspace_documents": CURRENT_COLUMNS["workspace_documents"]
+    **{name: columns for name, columns in GENESIS_HEAD_COLUMNS.items() if name != "workspace_memories"},
+    "workspace_documents": GENESIS_HEAD_COLUMNS["workspace_documents"]
     - {"content_hash", "version", "ingestion_attempts", "chunk_count", "updated_at"},
 }
 DURABLE_INGESTION_COLUMNS = {
-    name: columns for name, columns in CURRENT_COLUMNS.items() if name != "workspace_memories"
+    name: columns for name, columns in GENESIS_HEAD_COLUMNS.items() if name != "workspace_memories"
 }
 EXPECTED_COLUMNS = CURRENT_COLUMNS
 
@@ -44,6 +60,8 @@ def verify_genesis_schema(
         expected_columns = BASELINE_COLUMNS
     elif target_revision == "0002_durable_document_ingestion":
         expected_columns = DURABLE_INGESTION_COLUMNS
+    elif target_revision == GENESIS_HEAD_REVISION:
+        expected_columns = GENESIS_HEAD_COLUMNS
     else:
         expected_columns = CURRENT_COLUMNS
     inspector = inspect(engine)
@@ -88,6 +106,7 @@ def verify_genesis_schema(
         mapped_fks = {
             ((column.name,), foreign_key.column.table.name, (foreign_key.column.name,))
             for column in mapped_table.columns
+            if column.name in expected_columns[table_name]
             for foreign_key in column.foreign_keys
         }
         if actual_fks != mapped_fks:

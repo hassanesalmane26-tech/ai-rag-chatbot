@@ -21,10 +21,12 @@ from langchain_core.documents import Document
 from app.main import app
 from app.database.database import Base, SessionLocal, engine
 from app.database.genesis_models import Workspace, WorkspaceDocument
+from app.database.schema import HEAD_REVISION
 from app.knowledge.service import MAX_UPLOAD_BYTES, create_document, delete_document
 from app.knowledge.reconciliation import audit_workspace_knowledge
 from app.rag.search import search_workspace_documents
 from app.modules.registry import modules_for_edition
+from app.tenancy.models import Organization
 
 
 class InMemoryVectorStore:
@@ -120,6 +122,14 @@ class GenesisApiTests(unittest.TestCase):
             ["home", "conversations", "knowledge", "memory"],
         )
 
+    def test_identity_and_tenant_administration_are_not_public_in_ai1(self):
+        schema = self.client.get("/openapi.json")
+        self.assertEqual(schema.status_code, 200, schema.text)
+        paths = schema.json()["paths"]
+        self.assertFalse(any("/users" in path for path in paths))
+        self.assertFalse(any("/organizations" in path for path in paths))
+        self.assertFalse(any("/memberships" in path for path in paths))
+
     def test_module_registry_is_stable_and_workspace_scoped(self):
         workspace = self.workspace("Module registry")
         response = self.client.get(f"/v1/workspaces/{workspace['id']}/modules")
@@ -143,7 +153,7 @@ class GenesisApiTests(unittest.TestCase):
         self.assertEqual(ready.json(), {"status": "ready", "checks": {"database": "ok"}})
         build = self.client.get("/health/build")
         self.assertEqual(build.status_code, 200, build.text)
-        self.assertEqual(build.json()["migration_head"], "0003_workspace_memory")
+        self.assertEqual(build.json()["migration_head"], HEAD_REVISION)
         self.assertEqual(build.json()["migration_revision"], "unmanaged")
 
     def test_error_contract_generates_a_safe_request_id(self):
@@ -162,6 +172,16 @@ class GenesisApiTests(unittest.TestCase):
         listed = self.client.get("/v1/workspaces")
         self.assertEqual(listed.status_code, 200, listed.text)
         self.assertIn(workspace["id"], [item["id"] for item in listed.json()["data"]])
+
+        db = SessionLocal()
+        try:
+            persisted = db.get(Workspace, workspace["id"])
+            self.assertIsNotNone(persisted.organization_id)
+            self.assertNotIn("organization_id", workspace)
+            organization = db.get(Organization, persisted.organization_id)
+            self.assertEqual(organization.ownership_state, "legacy_unclaimed")
+        finally:
+            db.close()
 
     def test_workspace_can_be_renamed_without_losing_description(self):
         created = self.client.post(

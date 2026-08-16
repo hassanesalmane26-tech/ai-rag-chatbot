@@ -23,9 +23,11 @@ Data:       PostgreSQL + object storage + derived vector index
 Platform:   audit + telemetry + migrations + release controls
 ```
 
-AI-1 adds the identity data model and provider-neutral interfaces. AI-2 makes
-authorization mandatory before domain access. These are separate so the data
-adoption can be verified before enforcement changes runtime behavior.
+AI-1 adds the identity data model and provider-neutral interfaces. It stores
+external `(issuer, subject)` identities separately from internal Users, creates
+bounded Organization Memberships and exposes an internal tenant resolver. AI-2
+makes that resolver mandatory before domain access. These are separate so the
+data adoption can be verified before enforcement changes runtime behavior.
 
 ## Existing data adoption
 
@@ -36,7 +38,9 @@ AI-1 uses expand/backfill/contract migrations:
 3. add a nullable `organization_id` to Workspaces;
 4. attach every existing Workspace without changing its UUID;
 5. verify row counts, foreign keys and ownership coverage;
-6. only in a later compatible revision make ownership mandatory.
+6. represent the neutral bootstrap Organization as `legacy_unclaimed`, without
+   inventing a User or Membership;
+7. only in a later compatible revision make ownership mandatory.
 
 No Genesis conversation, message, document, memory, original or vector is
 rewritten during AI-0.

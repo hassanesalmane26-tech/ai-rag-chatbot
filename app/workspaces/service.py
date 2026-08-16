@@ -10,13 +10,34 @@ from app.database.genesis_models import (
     WorkspaceMessage,
 )
 from app.modules.registry import modules_for_edition, serialize_module
+from app.tenancy.service import ensure_legacy_organization
 
 
 def ensure_genesis_workspace(db: Session) -> Workspace:
     workspace = db.query(Workspace).order_by(Workspace.created_at.asc()).first()
     if workspace:
+        if not workspace.organization_id:
+            raise RuntimeError(
+                "Workspace tenancy adoption is required before application startup"
+            )
         return workspace
-    workspace = Workspace(name="TRIDENT GENESIS", description="Votre espace de travail IA")
+    workspace = Workspace(
+        name="TRIDENT GENESIS",
+        description="Votre espace de travail IA",
+        organization_id=ensure_legacy_organization(db).id,
+    )
+    db.add(workspace)
+    db.commit()
+    db.refresh(workspace)
+    return workspace
+
+
+def create_genesis_workspace(db: Session, name: str, description: str | None) -> Workspace:
+    workspace = Workspace(
+        name=name,
+        description=description,
+        organization_id=ensure_legacy_organization(db).id,
+    )
     db.add(workspace)
     db.commit()
     db.refresh(workspace)

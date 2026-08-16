@@ -86,11 +86,15 @@ preserve Workspace IDs and business data.
 Publish and tag the validated baseline, protect runtime artifacts, record the
 anonymous-demo boundary and create the dedicated `trident-ai` branch.
 
-### AI-1 — Identity architecture and tenant model
+### AI-1 — Identity architecture and tenant model (implemented)
 
 Add provider-neutral OIDC interfaces plus User, Organization, Membership and
 the initial `owner`, `admin`, `member` role vocabulary. Adopt existing
 Workspaces through verified expand/backfill migrations.
+
+The provider-neutral contracts, tenant persistence, bootstrap adoption and
+internal tenant resolver are implemented. Real OIDC verification and route
+enforcement remain AI-2 work.
 
 ### AI-2 — Systematic Workspace authorization
 

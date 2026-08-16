@@ -20,6 +20,9 @@ class Workspace(Base):
     __tablename__ = "workspaces"
 
     id = Column(String(36), primary_key=True, default=new_id)
+    organization_id = Column(
+        String(36), ForeignKey("organizations.id"), nullable=True, index=True
+    )
     name = Column(String(120), nullable=False)
     description = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
