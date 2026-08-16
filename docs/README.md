@@ -18,6 +18,11 @@ are updated before significant implementation changes are made.
 | [Sprint 2 visual system](phases/sprint-2-visual-system.md) | Reusable visual identity, motion, and accessibility architecture. |
 | [Sprint 6 Documents Engine](phases/sprint-6-documents.md) | Workspace-scoped document interaction and state architecture. |
 | [Sprint 7 backend foundation](phases/sprint-7-backend-foundation.md) | Configuration, lifecycle, errors, and non-destructive migration baseline. |
+| [Sprint 7 durable ingestion](phases/sprint-7-durable-ingestion.md) | Recoverable and idempotent Knowledge lifecycle. |
+| [Sprint 8 Memory](phases/sprint-8-memory.md) | Explicit bounded Workspace Memory. |
+| [Sprint 9 Modules](phases/sprint-9-modules.md) | Declarative Workspace module composition. |
+| [Sprint 10 polish](phases/sprint-10-polish.md) | Final UX, accessibility and resilience hardening. |
+| [GENESIS completion](phases/genesis-completion.md) | Migration, runtime and release-boundary record. |
 
 ## Documentation rule
 
