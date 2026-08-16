@@ -23,6 +23,10 @@ are updated before significant implementation changes are made.
 | [Sprint 9 Modules](phases/sprint-9-modules.md) | Declarative Workspace module composition. |
 | [Sprint 10 polish](phases/sprint-10-polish.md) | Final UX, accessibility and resilience hardening. |
 | [GENESIS completion](phases/genesis-completion.md) | Migration, runtime and release-boundary record. |
+| [Genesis v1.0.0 freeze](releases/trident-genesis-v1.0.0.md) | Immutable baseline and release boundary. |
+| [TRIDENT AI transition](architecture/trident-ai-transition.md) | Additive Identity and edition evolution architecture. |
+| [Sprint AI-0](phases/sprint-ai-0.md) | Freeze, publication and security-preparation record. |
+| [AI-0 edge hardening plan](operations/ai0-edge-hardening.md) | Production artifact, headers, TLS and supervisor transition. |
 
 ## Documentation rule
 

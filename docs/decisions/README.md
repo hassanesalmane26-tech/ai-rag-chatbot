@@ -9,3 +9,4 @@ status, owner, and review trigger.
 - [ADR 0007 — Recoverable idempotent ingestion](0007-recoverable-idempotent-ingestion.md)
 - [ADR 0008 — Explicit Workspace memory](0008-explicit-workspace-memory.md)
 - [ADR 0009 — Declarative module registry](0009-declarative-module-registry.md)
+- [ADR 0010 — Provider-agnostic identity and Organization ownership](0010-provider-agnostic-identity-boundary.md)

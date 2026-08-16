@@ -1,13 +1,21 @@
 # Security Baseline
 
-## Current risk assessment
+## Current Genesis freeze risk assessment
 
-The Phase 0 prototype has critical production gaps: no authentication or tenant
-isolation; arbitrary uploaded filenames are written beneath a local directory;
-uploads are synchronously processed; data and indexes are local; database
-configuration has no safe deployment contract; debug defaults to enabled; and
-chat history is globally shared. Do not expose this implementation publicly or
-use it with sensitive data.
+Genesis validates upload names/types/sizes, generates storage names, scopes
+current resources by Workspace, uses Alembic and has a recoverable ingestion
+lifecycle. These are domain-integrity controls, not a tenant security boundary.
+
+The current development/demo endpoint is HTTP and `/api/v1` is anonymous. It
+has no User, Organization, Membership, OIDC authentication or server-side
+authorization. The deployment currently proxies a Vite development server and
+uses local disk for originals and Chroma. It must not receive sensitive,
+private or multi-user data. TRIDENT AI production remains NO-GO until AI-1 and
+AI-2 close identity and authorization, and an approved domain enables TLS.
+
+AI-0 restricts owner-controlled local secret/data permissions and records the
+required edge hardening. It does not add fake authentication or claim that a
+Workspace UUID is an access control.
 
 ## Mandatory controls by Phase 3
 
@@ -29,3 +37,15 @@ Treat retrieved documents and user input as untrusted. Isolate instructions from
 data, restrict tool permissions, minimize prompt data, apply output policy, log
 only privacy-safe traces, and test prompt-injection and cross-tenant retrieval
 resistance.
+
+## Immediate operational controls before production
+
+- Serve a production frontend artifact rather than Vite's development server.
+- Terminate TLS at the edge after an owner-approved domain is available.
+- Add `X-Content-Type-Options`, frame protection, a referrer policy and a tested
+  Content Security Policy at the edge.
+- Run backend and frontend through one documented supervisor; do not rely on a
+  manually attached terminal session.
+- Restrict runtime environment files, originals and vector data to the service
+  identity and keep them outside Git.
+- Protect or remove public OpenAPI documentation according to environment.

@@ -75,3 +75,52 @@ restoration and rollback procedures have been exercised.
 Add enterprise governance, advanced retrieval, usage metering, multi-region
 strategy as justified, integration framework, and selectively extract services
 whose documented boundaries demand it.
+
+## TRIDENT AI delivery sequence
+
+Genesis is frozen before this sequence begins. Each sprint is additive and must
+preserve Workspace IDs and business data.
+
+### AI-0 — Genesis freeze and immediate security preparation
+
+Publish and tag the validated baseline, protect runtime artifacts, record the
+anonymous-demo boundary and create the dedicated `trident-ai` branch.
+
+### AI-1 — Identity architecture and tenant model
+
+Add provider-neutral OIDC interfaces plus User, Organization, Membership and
+the initial `owner`, `admin`, `member` role vocabulary. Adopt existing
+Workspaces through verified expand/backfill migrations.
+
+### AI-2 — Systematic Workspace authorization
+
+Resolve `CurrentPrincipal`, membership and `AuthorizedWorkspace` before every
+tenant-owned data access or provider call. Add complete cross-tenant tests.
+
+### AI-3 — Session and entry experience
+
+Add session bootstrap, Organization/Workspace entry and expiry behavior without
+displacing the Workspace as the primary application surface.
+
+### AI-4 — Audit, API protection and contracts
+
+Add immutable audit events, pagination, quotas/rate limits, security policy and
+OpenAPI compatibility gates.
+
+### AI-5 — Durable production Knowledge infrastructure
+
+Replace local originals and request-bound ingestion with object storage,
+versioned metadata and durable idempotent jobs behind existing boundaries.
+
+### AI-6 — AI orchestration and trust
+
+Introduce provider adapters, model/prompt/retrieval policy, traceable citations,
+safeguards and evaluation fixtures.
+
+### AI-7 — Quality, CI and release candidate
+
+Add PostgreSQL integration, browser/E2E/accessibility coverage, CI, security
+scans, immutable artifacts and complete release validation.
+
+PRO governance/connectors and NOVA agents/automations remain outside this
+sequence. Only stable extension seams may be prepared.

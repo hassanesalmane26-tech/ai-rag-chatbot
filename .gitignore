@@ -221,3 +221,9 @@ __marimo__/
 frontend/node_modules/
 frontend/dist/
 vector_db/
+documents/workspaces/
+backups/
+*.dump
+*.pgdump
+.env.*
+!.env.example

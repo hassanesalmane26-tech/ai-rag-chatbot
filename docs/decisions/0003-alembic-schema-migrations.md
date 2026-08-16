@@ -1,6 +1,6 @@
 # ADR 0003: Use Alembic for schema migrations
 
-- **Status:** Proposed — implementation approval required
+- **Status:** Accepted — implemented by Sprint 7 Genesis
 - **Date:** 2026-07-29
 - **Owner:** TRIDENT architecture
 

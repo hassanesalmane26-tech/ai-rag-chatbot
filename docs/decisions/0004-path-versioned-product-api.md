@@ -1,6 +1,6 @@
 # ADR 0004: Version product APIs in the path
 
-- **Status:** Proposed — implementation approval required
+- **Status:** Accepted — implemented by the Genesis Workspace API
 - **Date:** 2026-07-29
 - **Owner:** TRIDENT architecture
 
