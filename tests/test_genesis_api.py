@@ -24,6 +24,7 @@ from app.database.genesis_models import Workspace, WorkspaceDocument
 from app.knowledge.service import MAX_UPLOAD_BYTES, create_document, delete_document
 from app.knowledge.reconciliation import audit_workspace_knowledge
 from app.rag.search import search_workspace_documents
+from app.modules.registry import modules_for_edition
 
 
 class InMemoryVectorStore:
@@ -114,6 +115,24 @@ class GenesisApiTests(unittest.TestCase):
             overview.json()["data"]["metrics"],
             {"conversations": 0, "documents": 0, "messages": 0, "memories": 0},
         )
+        self.assertEqual(
+            [module["id"] for module in overview.json()["data"]["modules"]],
+            ["home", "conversations", "knowledge", "memory"],
+        )
+
+    def test_module_registry_is_stable_and_workspace_scoped(self):
+        workspace = self.workspace("Module registry")
+        response = self.client.get(f"/v1/workspaces/{workspace['id']}/modules")
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["meta"]["edition"], "genesis")
+        identifiers = [module["id"] for module in response.json()["data"]]
+        self.assertEqual(identifiers, ["home", "conversations", "knowledge", "memory"])
+        self.assertEqual(len(identifiers), len(set(identifiers)))
+        self.assertEqual(
+            [module.order for module in modules_for_edition()], sorted(module.order for module in modules_for_edition())
+        )
+        missing = self.client.get("/v1/workspaces/not-found/modules")
+        self.assertEqual(missing.status_code, 404, missing.text)
 
     def test_health_and_request_correlation_contracts(self):
         live = self.client.get("/health/live", headers={"x-request-id": "request-test-123"})

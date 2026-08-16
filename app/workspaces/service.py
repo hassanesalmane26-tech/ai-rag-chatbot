@@ -9,6 +9,7 @@ from app.database.genesis_models import (
     WorkspaceMemory,
     WorkspaceMessage,
 )
+from app.modules.registry import modules_for_edition, serialize_module
 
 
 def ensure_genesis_workspace(db: Session) -> Workspace:
@@ -40,12 +41,7 @@ def workspace_activity(db: Session, workspace: Workspace) -> dict:
             "messages": message_count,
             "memories": memory_count,
         },
-        "modules": [
-            {"id": "home", "label": "Accueil", "status": "ready"},
-            {"id": "conversations", "label": "Conversations", "status": "ready"},
-            {"id": "knowledge", "label": "Knowledge", "status": "ready"},
-            {"id": "memory", "label": "Memory", "status": "ready"},
-        ],
+        "modules": [serialize_module(module) for module in modules_for_edition()],
     }
 
 

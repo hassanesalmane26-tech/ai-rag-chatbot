@@ -39,3 +39,4 @@ export const updateMemory = (workspaceId, memoryId, payload) => request(`/worksp
   method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
 });
 export const deleteMemory = (workspaceId, memoryId) => request(`/workspaces/${workspaceId}/memories/${memoryId}`, { method: "DELETE" });
+export const listWorkspaceModules = (workspaceId) => request(`/workspaces/${workspaceId}/modules`);
