@@ -9,7 +9,7 @@ import useWorkspaceDocuments from "./useWorkspaceDocuments";
 
 export default function DocumentsView() {
   const { activeWorkspace, activeWorkspaceId } = useWorkspaceContext();
-  const { documents, loading, uploading, deletingId, error, refresh, uploadDocument, deleteDocument } = useWorkspaceDocuments(activeWorkspaceId);
+  const { documents, loading, uploading, deletingId, retryingId, error, refresh, uploadDocument, deleteDocument, retryDocument } = useWorkspaceDocuments(activeWorkspaceId);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef(null);
 
@@ -56,7 +56,10 @@ export default function DocumentsView() {
       <div className="document-card__icon"><FileText size={22} /></div>
       <div className="document-card__body"><strong title={document.display_name}>{document.display_name}</strong><span>{formatDocumentSize(document.size_bytes)} · {documentStatusLabel(document.status)}</span>{document.error_message && <small>{document.error_message}</small>}</div>
       <div className="document-card__status" title={documentStatusLabel(document.status)}>{document.status === "failed" ? <AlertTriangle size={15} /> : <ShieldCheck size={15} />}<span>{document.status === "indexed" ? "INDEXÉ" : document.status.toUpperCase()}</span></div>
-      <button className="document-card__delete" type="button" onClick={() => remove(document)} aria-label={`Supprimer ${document.display_name}`} disabled={Boolean(deletingId) || uploading}>{deletingId === document.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}</button>
+      <div className="document-card__actions">
+        {document.status === "failed" && <button className="document-card__retry" type="button" onClick={() => retryDocument(document.id)} aria-label={`Relancer l’indexation de ${document.display_name}`} disabled={Boolean(retryingId) || Boolean(deletingId)}>{retryingId === document.id ? <LoaderCircle className="spin" size={16} /> : <RefreshCw size={16} />}</button>}
+        <button className="document-card__delete" type="button" onClick={() => remove(document)} aria-label={`Supprimer ${document.display_name}`} disabled={Boolean(deletingId) || Boolean(retryingId) || uploading}>{deletingId === document.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}</button>
+      </div>
     </article>)}</div>}
   </section>;
 }

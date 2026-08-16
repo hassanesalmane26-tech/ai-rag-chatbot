@@ -18,7 +18,12 @@ from app.core.config import Settings
 from app.core.errors import BusinessRuleError, ConflictError
 from app.database.database import Base
 from app.database import genesis_models, models  # noqa: F401
-from app.database.schema import BASELINE_REVISION, EXPECTED_COLUMNS, verify_genesis_schema
+from app.database.schema import (
+    BASELINE_REVISION,
+    EXPECTED_COLUMNS,
+    HEAD_REVISION,
+    verify_genesis_schema,
+)
 from app.main import create_app
 
 
@@ -69,7 +74,7 @@ class MigrationFoundationTests(unittest.TestCase):
                 self.assertTrue(verify_genesis_schema(engine).compatible)
                 with engine.connect() as connection:
                     revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-                self.assertEqual(revision, BASELINE_REVISION)
+                self.assertEqual(revision, HEAD_REVISION)
             finally:
                 engine.dispose()
 
@@ -123,19 +128,23 @@ class MigrationAdoptionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempdir:
             database_url = f"sqlite:///{Path(tempdir) / 'existing.sqlite'}"
             engine = create_engine(database_url)
-            Base.metadata.create_all(engine)
+            command.upgrade(self.alembic_config(database_url), BASELINE_REVISION)
+            with engine.begin() as connection:
+                connection.execute(text("DROP TABLE alembic_version"))
             before = set(inspect(engine).get_table_names())
-            verification = verify_genesis_schema(engine)
+            verification = verify_genesis_schema(engine, BASELINE_REVISION)
             self.assertTrue(verification.compatible, verification.issues)
             engine.dispose()
 
             command.stamp(self.alembic_config(database_url), BASELINE_REVISION)
+            command.upgrade(self.alembic_config(database_url), "head")
             checked = create_engine(database_url)
             try:
                 after = set(inspect(checked).get_table_names())
                 self.assertEqual(after - {"alembic_version"}, before)
                 for table, columns in EXPECTED_COLUMNS.items():
                     self.assertTrue(columns.issubset({item["name"] for item in inspect(checked).get_columns(table)}))
+                self.assertTrue(verify_genesis_schema(checked).compatible)
             finally:
                 checked.dispose()
 

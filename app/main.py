@@ -17,6 +17,7 @@ from app.core.config import Settings, settings
 from app.core.errors import APIError
 from app.core.logging import configure_logging
 from app.database.database import engine
+from app.database.schema import HEAD_REVISION
 
 logger = logging.getLogger("trident.api")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{8,128}$")
@@ -138,7 +139,7 @@ def create_app(runtime_settings: Settings = settings, database_engine: Engine = 
             "environment": runtime_settings.environment,
             "version": runtime_settings.app_version,
             "build_sha": runtime_settings.build_sha,
-            "migration_head": "0001_genesis_baseline",
+            "migration_head": HEAD_REVISION,
             "migration_revision": migration_revision,
         }
 

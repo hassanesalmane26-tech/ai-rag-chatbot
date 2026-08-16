@@ -26,6 +26,7 @@ export const sendWorkspaceMessage = (workspaceId, conversationId, content) => re
 });
 export const listDocuments = (workspaceId) => request(`/workspaces/${workspaceId}/documents`);
 export const deleteDocument = (workspaceId, documentId) => request(`/workspaces/${workspaceId}/documents/${documentId}`, { method: "DELETE" });
+export const retryDocument = (workspaceId, documentId) => request(`/workspaces/${workspaceId}/documents/${documentId}/retry`, { method: "POST" });
 export async function uploadDocument(workspaceId, file) {
   const form = new FormData(); form.append("file", file);
   return request(`/workspaces/${workspaceId}/documents`, { method: "POST", body: form });

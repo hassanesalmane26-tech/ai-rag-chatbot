@@ -9,10 +9,17 @@ from app.database.database import Base
 from app.database import genesis_models, models  # noqa: F401 - register metadata
 
 BASELINE_REVISION = "0001_genesis_baseline"
-EXPECTED_COLUMNS = {
+HEAD_REVISION = "0002_durable_document_ingestion"
+CURRENT_COLUMNS = {
     table.name: {column.name for column in table.columns}
     for table in Base.metadata.sorted_tables
 }
+BASELINE_COLUMNS = {
+    **CURRENT_COLUMNS,
+    "workspace_documents": CURRENT_COLUMNS["workspace_documents"]
+    - {"content_hash", "version", "ingestion_attempts", "chunk_count", "updated_at"},
+}
+EXPECTED_COLUMNS = CURRENT_COLUMNS
 
 
 @dataclass(frozen=True)
@@ -26,11 +33,16 @@ def _type_signature(column_type) -> tuple[str, int | None]:
     return affinity.__name__, getattr(column_type, "length", None)
 
 
-def verify_genesis_schema(engine: Engine) -> SchemaVerification:
+def verify_genesis_schema(
+    engine: Engine, target_revision: str = HEAD_REVISION
+) -> SchemaVerification:
     """Compare the mapped baseline without performing DDL or data writes."""
+    expected_columns = (
+        BASELINE_COLUMNS if target_revision == BASELINE_REVISION else CURRENT_COLUMNS
+    )
     inspector = inspect(engine)
     actual_tables = set(inspector.get_table_names())
-    expected_tables = set(EXPECTED_COLUMNS)
+    expected_tables = set(expected_columns)
     issues = []
 
     for table in sorted(expected_tables - actual_tables):
@@ -41,13 +53,15 @@ def verify_genesis_schema(engine: Engine) -> SchemaVerification:
     for table_name in sorted(expected_tables & actual_tables):
         mapped_table = Base.metadata.tables[table_name]
         actual_columns = {column["name"]: column for column in inspector.get_columns(table_name)}
-        missing = set(EXPECTED_COLUMNS[table_name]) - set(actual_columns)
+        missing = set(expected_columns[table_name]) - set(actual_columns)
         if missing:
             issues.append(f"{table_name} missing columns: {','.join(sorted(missing))}")
-        extra = set(actual_columns) - set(EXPECTED_COLUMNS[table_name])
+        extra = set(actual_columns) - set(expected_columns[table_name])
         if extra:
             issues.append(f"{table_name} unexpected columns: {','.join(sorted(extra))}")
         for mapped_column in mapped_table.columns:
+            if mapped_column.name not in expected_columns[table_name]:
+                continue
             actual = actual_columns.get(mapped_column.name)
             if not actual:
                 continue
@@ -81,6 +95,7 @@ def verify_genesis_schema(engine: Engine) -> SchemaVerification:
         mapped_indexes = {
             (tuple(column.name for column in index.columns), bool(index.unique))
             for index in mapped_table.indexes
+            if all(column.name in expected_columns[table_name] for column in index.columns)
         }
         if not mapped_indexes.issubset(actual_indexes):
             issues.append(f"{table_name} indexes mismatch")

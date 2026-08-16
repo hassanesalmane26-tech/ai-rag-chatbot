@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   deleteDocument as deleteDocumentRequest,
   listDocuments,
+  retryDocument as retryDocumentRequest,
   uploadDocument as uploadDocumentRequest,
 } from "../../services/api";
 import {
@@ -16,6 +17,7 @@ export default function useWorkspaceDocuments(workspaceId) {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [retryingId, setRetryingId] = useState(null);
   const [error, setError] = useState("");
   const workspaceRef = useRef(workspaceId);
   const requestVersionRef = useRef(0);
@@ -49,6 +51,7 @@ export default function useWorkspaceDocuments(workspaceId) {
     setError("");
     setUploading(false);
     setDeletingId(null);
+    setRetryingId(null);
     refresh();
     return () => { requestVersionRef.current += 1; };
   }, [workspaceId, refresh]);
@@ -96,5 +99,24 @@ export default function useWorkspaceDocuments(workspaceId) {
     }
   }, [workspaceId, deletingId]);
 
-  return { documents, loading, uploading, deletingId, error, refresh, uploadDocument, deleteDocument };
+  const retryDocument = useCallback(async (documentId) => {
+    const requestWorkspaceId = workspaceId;
+    if (!requestWorkspaceId || retryingId) return false;
+    setRetryingId(documentId);
+    setError("");
+    try {
+      const document = await retryDocumentRequest(requestWorkspaceId, documentId);
+      if (acceptsDocumentResult(workspaceRef.current, requestWorkspaceId)) {
+        setDocuments((current) => prependDocument(current, document));
+      }
+      return true;
+    } catch (err) {
+      if (acceptsDocumentResult(workspaceRef.current, requestWorkspaceId)) setError(err.message);
+      return false;
+    } finally {
+      if (acceptsDocumentResult(workspaceRef.current, requestWorkspaceId)) setRetryingId(null);
+    }
+  }, [workspaceId, retryingId]);
+
+  return { documents, loading, uploading, deletingId, retryingId, error, refresh, uploadDocument, deleteDocument, retryDocument };
 }

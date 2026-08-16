@@ -37,5 +37,7 @@ export function documentStatusLabel(status) {
     processing: "Indexation en cours",
     pending: "En attente",
     failed: "Indexation échouée",
+    deleting: "Suppression en cours",
+    delete_failed: "Suppression à relancer",
   }[status] || "État inconnu";
 }

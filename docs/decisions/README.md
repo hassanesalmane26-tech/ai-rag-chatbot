@@ -5,3 +5,5 @@ supersede an ADR rather than rewriting history.
 
 Naming: `NNNN-short-title.md`. Each ADR states context, decision, consequences,
 status, owner, and review trigger.
+
+- [ADR 0007 — Recoverable idempotent ingestion](0007-recoverable-idempotent-ingestion.md)

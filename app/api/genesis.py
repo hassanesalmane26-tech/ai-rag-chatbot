@@ -7,7 +7,12 @@ from sqlalchemy.orm import Session
 from app.conversations.service import create_conversation, reply_to_conversation, serialize_conversation, serialize_message
 from app.database.database import get_db
 from app.database.genesis_models import Conversation, Workspace, WorkspaceDocument, WorkspaceMessage
-from app.knowledge.service import create_document, delete_document, serialize_document
+from app.knowledge.service import (
+    create_document,
+    delete_document,
+    retry_document,
+    serialize_document,
+)
 from app.workspaces.service import ensure_genesis_workspace, serialize_workspace, workspace_activity
 
 router = APIRouter(prefix="/v1", tags=["Genesis"])
@@ -157,3 +162,11 @@ def remove_document(workspace_id: str, document_id: str, db: Session = Depends(g
         raise HTTPException(status_code=404, detail="Document introuvable.")
     delete_document(db, document)
     return data({"id": document_id, "deleted": True})
+
+
+@router.post("/workspaces/{workspace_id}/documents/{document_id}/retry")
+def retry_failed_document(workspace_id: str, document_id: str, db: Session = Depends(get_db)):
+    document = db.get(WorkspaceDocument, document_id)
+    if not document or document.workspace_id != workspace_id:
+        raise HTTPException(status_code=404, detail="Document introuvable.")
+    return data(serialize_document(retry_document(db, document)))

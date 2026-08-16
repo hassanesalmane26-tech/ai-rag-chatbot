@@ -22,6 +22,7 @@ from app.main import app
 from app.database.database import Base, SessionLocal, engine
 from app.database.genesis_models import Workspace, WorkspaceDocument
 from app.knowledge.service import MAX_UPLOAD_BYTES, create_document, delete_document
+from app.knowledge.reconciliation import audit_workspace_knowledge
 from app.rag.search import search_workspace_documents
 
 
@@ -31,8 +32,10 @@ class InMemoryVectorStore:
     def __init__(self):
         self.documents = []
 
-    def add_documents(self, documents):
-        self.documents.extend(documents)
+    def add_documents(self, documents, ids=None):
+        for document, identifier in zip(documents, ids or [None] * len(documents)):
+            document.metadata["_test_vector_id"] = identifier
+            self.documents.append(document)
 
     def delete(self, where):
         self.documents = [doc for doc in self.documents if doc.metadata.get("document_id") != where.get("document_id")]
@@ -118,7 +121,7 @@ class GenesisApiTests(unittest.TestCase):
         self.assertEqual(ready.json(), {"status": "ready", "checks": {"database": "ok"}})
         build = self.client.get("/health/build")
         self.assertEqual(build.status_code, 200, build.text)
-        self.assertEqual(build.json()["migration_head"], "0001_genesis_baseline")
+        self.assertEqual(build.json()["migration_head"], "0002_durable_document_ingestion")
         self.assertEqual(build.json()["migration_revision"], "unmanaged")
 
     def test_error_contract_generates_a_safe_request_id(self):
@@ -309,6 +312,80 @@ class GenesisApiTests(unittest.TestCase):
         self.assertEqual(deleted.json()["data"], {"id": document_id, "deleted": True})
         self.assertEqual(self.client.get(f"/v1/workspaces/{first['id']}/documents").json()["data"], [])
 
+    def test_document_upload_is_idempotent_by_workspace_content(self):
+        workspace = self.workspace("Idempotence")
+        vector = InMemoryVectorStore()
+        with tempfile.TemporaryDirectory() as tempdir, patch(
+            "app.knowledge.service.DOCUMENTS_ROOT", Path(tempdir)
+        ), patch("app.knowledge.service.vectorstore", vector):
+            first = self.client.post(
+                f"/v1/workspaces/{workspace['id']}/documents",
+                files={"file": ("first.txt", b"same durable content", "text/plain")},
+            )
+            second = self.client.post(
+                f"/v1/workspaces/{workspace['id']}/documents",
+                files={"file": ("renamed.txt", b"same durable content", "text/plain")},
+            )
+        self.assertEqual(first.status_code, 201, first.text)
+        self.assertEqual(second.status_code, 201, second.text)
+        self.assertEqual(first.json()["data"]["id"], second.json()["data"]["id"])
+        listed = self.client.get(f"/v1/workspaces/{workspace['id']}/documents")
+        self.assertEqual(len(listed.json()["data"]), 1)
+        self.assertEqual(len(vector.documents), 1)
+
+    def test_failed_ingestion_preserves_original_and_can_be_retried(self):
+        workspace = self.workspace("Retry")
+        failing_vector = MagicMock()
+        failing_vector.add_documents.side_effect = RuntimeError("index offline")
+        with tempfile.TemporaryDirectory() as tempdir, patch(
+            "app.knowledge.service.DOCUMENTS_ROOT", Path(tempdir)
+        ), patch("app.knowledge.service.vectorstore", failing_vector):
+            failed = self.client.post(
+                f"/v1/workspaces/{workspace['id']}/documents",
+                files={"file": ("retry.txt", b"retryable content", "text/plain")},
+            )
+            self.assertEqual(failed.status_code, 503, failed.text)
+            listed = self.client.get(f"/v1/workspaces/{workspace['id']}/documents").json()["data"]
+            self.assertEqual(len(listed), 1)
+            document = listed[0]
+            self.assertEqual(document["status"], "failed")
+            stored = Path(tempdir) / workspace["id"] / next(
+                path.name for path in (Path(tempdir) / workspace["id"]).iterdir()
+            )
+            self.assertTrue(stored.exists())
+
+            recovered_vector = InMemoryVectorStore()
+            with patch("app.knowledge.service.vectorstore", recovered_vector):
+                retried = self.client.post(
+                    f"/v1/workspaces/{workspace['id']}/documents/{document['id']}/retry"
+                )
+            self.assertEqual(retried.status_code, 200, retried.text)
+            self.assertEqual(retried.json()["data"]["status"], "indexed")
+            self.assertEqual(retried.json()["data"]["ingestion_attempts"], 2)
+            self.assertEqual(len(recovered_vector.documents), 1)
+
+    def test_document_retry_is_scoped_to_workspace(self):
+        first, second = self.workspace("Retry owner"), self.workspace("Retry denied")
+        db = SessionLocal()
+        try:
+            document = WorkspaceDocument(
+                workspace_id=first["id"],
+                display_name="private.txt",
+                storage_name="private.txt",
+                media_type="text/plain",
+                size_bytes=7,
+                status="failed",
+            )
+            db.add(document)
+            db.commit()
+            document_id = document.id
+        finally:
+            db.close()
+        denied = self.client.post(
+            f"/v1/workspaces/{second['id']}/documents/{document_id}/retry"
+        )
+        self.assertEqual(denied.status_code, 404, denied.text)
+
     def test_knowledge_to_conversation_flow_keeps_workspace_scope_and_citations(self):
         workspace = self.workspace("Knowledge E2E")
         conversation = self.client.post(f"/v1/workspaces/{workspace['id']}/conversations", json={}).json()["data"]
@@ -357,10 +434,15 @@ class KnowledgeServiceTests(unittest.TestCase):
             self.assertEqual(document.status, "indexed")
             self.assertEqual(chunk.metadata["workspace_id"], self.workspace.id)
             self.assertEqual(chunk.metadata["document_id"], document.id)
-            vector.add_documents.assert_called_once_with([chunk])
+            vector.add_documents.assert_called_once()
+            indexed_chunks = vector.add_documents.call_args.args[0]
+            indexed_ids = vector.add_documents.call_args.kwargs["ids"]
+            self.assertEqual(indexed_chunks, [chunk])
+            self.assertEqual(indexed_ids, [f"{document.id}:v1:0"])
             delete_document(self.db, document)
             self.assertFalse(stored.exists())
-            vector.delete.assert_called_once_with(where={"document_id": document.id})
+            self.assertEqual(vector.delete.call_count, 2)
+            vector.delete.assert_called_with(where={"document_id": document.id})
 
     def test_search_always_filters_on_workspace_id(self):
         vector = MagicMock()
@@ -370,3 +452,60 @@ class KnowledgeServiceTests(unittest.TestCase):
         vector.similarity_search_with_relevance_scores.assert_called_once_with(
             "question", k=5, filter={"workspace_id": "workspace-a"}
         )
+
+    def test_partial_delete_preserves_metadata_and_original_for_retry(self):
+        document = WorkspaceDocument(
+            workspace_id=self.workspace.id,
+            display_name="durable.txt",
+            storage_name="durable.txt",
+            media_type="text/plain",
+            size_bytes=7,
+            status="indexed",
+        )
+        self.db.add(document)
+        self.db.commit()
+        stored = Path(self.tempdir.name) / self.workspace.id / document.storage_name
+        stored.parent.mkdir(parents=True)
+        stored.write_bytes(b"durable")
+        vector = MagicMock()
+        vector.delete.side_effect = RuntimeError("vector unavailable")
+        with patch("app.knowledge.service.DOCUMENTS_ROOT", Path(self.tempdir.name)), patch(
+            "app.knowledge.service.vectorstore", vector
+        ):
+            with self.assertRaises(Exception):
+                delete_document(self.db, document)
+        self.assertTrue(stored.exists())
+        preserved = self.db.get(WorkspaceDocument, document.id)
+        self.assertIsNotNone(preserved)
+        self.assertEqual(preserved.status, "delete_failed")
+
+    def test_reconciliation_reports_drift_without_mutating_state(self):
+        document = WorkspaceDocument(
+            workspace_id=self.workspace.id,
+            display_name="missing.txt",
+            storage_name="missing.txt",
+            media_type="text/plain",
+            size_bytes=7,
+            content_hash="0" * 64,
+            status="indexed",
+        )
+        self.db.add(document)
+        self.db.commit()
+        vector = MagicMock()
+        vector.get.return_value = {
+            "ids": ["orphan:v1:0"],
+            "metadatas": [{"workspace_id": self.workspace.id, "document_id": "orphan"}],
+        }
+        before = self.db.query(WorkspaceDocument).count()
+        report = audit_workspace_knowledge(
+            self.db,
+            self.workspace.id,
+            store=vector,
+            documents_root=Path(self.tempdir.name),
+        )
+        self.assertFalse(report.consistent)
+        self.assertEqual(
+            {issue.kind for issue in report.issues},
+            {"missing_original", "missing_vectors", "orphan_vectors"},
+        )
+        self.assertEqual(self.db.query(WorkspaceDocument).count(), before)
