@@ -104,8 +104,10 @@ def reply_to_conversation(
         for message in recent_messages(db, conversation.id)
     ]
     try:
-        response = OpenAI(api_key=settings.OPENAI_API_KEY).responses.create(
-            model="gpt-4.1-mini", input=conversation_input
+        response = OpenAI(
+            api_key=settings.openai_key(), timeout=settings.provider_timeout_seconds
+        ).responses.create(
+            model=settings.openai_chat_model, input=conversation_input
         )
         reply = response.output_text
     except Exception as exc:

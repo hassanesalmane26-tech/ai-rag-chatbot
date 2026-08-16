@@ -17,6 +17,7 @@ are updated before significant implementation changes are made.
 | [Sprint 1 stabilization](phases/sprint-1-stabilization.md) | Verification scope and intentionally deferred GENESIS work. |
 | [Sprint 2 visual system](phases/sprint-2-visual-system.md) | Reusable visual identity, motion, and accessibility architecture. |
 | [Sprint 6 Documents Engine](phases/sprint-6-documents.md) | Workspace-scoped document interaction and state architecture. |
+| [Sprint 7 backend foundation](phases/sprint-7-backend-foundation.md) | Configuration, lifecycle, errors, and non-destructive migration baseline. |
 
 ## Documentation rule
 

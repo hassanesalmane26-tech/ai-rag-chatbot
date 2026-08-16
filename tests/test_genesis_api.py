@@ -109,6 +109,26 @@ class GenesisApiTests(unittest.TestCase):
         self.assertEqual(overview.status_code, 200, overview.text)
         self.assertEqual(overview.json()["data"]["metrics"], {"conversations": 0, "documents": 0, "messages": 0})
 
+    def test_health_and_request_correlation_contracts(self):
+        live = self.client.get("/health/live", headers={"x-request-id": "request-test-123"})
+        self.assertEqual(live.status_code, 200, live.text)
+        self.assertEqual(live.headers["x-request-id"], "request-test-123")
+        ready = self.client.get("/health/ready")
+        self.assertEqual(ready.status_code, 200, ready.text)
+        self.assertEqual(ready.json(), {"status": "ready", "checks": {"database": "ok"}})
+        build = self.client.get("/health/build")
+        self.assertEqual(build.status_code, 200, build.text)
+        self.assertEqual(build.json()["migration_head"], "0001_genesis_baseline")
+        self.assertEqual(build.json()["migration_revision"], "unmanaged")
+
+    def test_error_contract_generates_a_safe_request_id(self):
+        missing = self.client.get("/v1/workspaces/not-found", headers={"x-request-id": "invalid id"})
+        self.assertEqual(missing.status_code, 404, missing.text)
+        payload = missing.json()["error"]
+        self.assertEqual(payload["code"], "RESOURCE_NOT_FOUND")
+        self.assertTrue(payload["request_id"])
+        self.assertEqual(missing.headers["x-request-id"], payload["request_id"])
+
     def test_workspace_identity_is_stable_and_can_be_read(self):
         workspace = self.workspace("Identité durable")
         fetched = self.client.get(f"/v1/workspaces/{workspace['id']}")
@@ -189,7 +209,9 @@ class GenesisApiTests(unittest.TestCase):
     def test_provider_failure_keeps_user_message_in_workspace_history(self):
         workspace = self.workspace()
         conversation = self.client.post(f"/v1/workspaces/{workspace['id']}/conversations", json={}).json()["data"]
-        with patch("app.conversations.service.OpenAI", side_effect=RuntimeError("offline")):
+        with patch("app.conversations.service.build_citations", return_value=("", [])), patch(
+            "app.conversations.service.OpenAI", side_effect=RuntimeError("offline")
+        ):
             failed = self.client.post(
                 f"/v1/workspaces/{workspace['id']}/conversations/{conversation['id']}/messages",
                 json={"content": "Message durable"},

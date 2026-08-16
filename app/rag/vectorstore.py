@@ -1,12 +1,10 @@
 from langchain_chroma import Chroma
 
+from app.core.config import settings
 from app.rag.embeddings import embeddings
 
 
-VECTOR_DB_PATH = "vector_db"
-
-
 vectorstore = Chroma(
-    persist_directory=VECTOR_DB_PATH,
+    persist_directory=str(settings.vector_db_path),
     embedding_function=embeddings,
 )

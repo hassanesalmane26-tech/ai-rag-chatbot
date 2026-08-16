@@ -4,6 +4,7 @@ from app.core.config import settings
 
 
 embeddings = OpenAIEmbeddings(
-    api_key=settings.OPENAI_API_KEY,
-    model="text-embedding-3-small",
+    api_key=settings.openai_key(),
+    model=settings.openai_embedding_model,
+    request_timeout=settings.provider_timeout_seconds,
 )

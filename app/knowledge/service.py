@@ -7,12 +7,13 @@ from pathlib import Path
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.database.genesis_models import WorkspaceDocument, new_id
 from app.rag.loader import load_document
 from app.rag.splitter import split_documents
 from app.rag.vectorstore import vectorstore
 
-DOCUMENTS_ROOT = Path("documents/workspaces")
+DOCUMENTS_ROOT = settings.documents_path
 ALLOWED_SUFFIXES = {".pdf", ".txt", ".docx"}
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 

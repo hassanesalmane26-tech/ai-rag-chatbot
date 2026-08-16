@@ -3,7 +3,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from app.core.config import settings
 
 engine = create_engine(
-    settings.DATABASE_URL,
+    settings.database_url,
     pool_pre_ping=True,
 )
 
@@ -20,6 +20,8 @@ def get_db():
     db = SessionLocal()
     try:
         yield db
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
-
