@@ -22,6 +22,9 @@ export default function MemoryView() {
       setTitle(""); setContent(""); setValidation("");
     }
   }
+  function confirmRemove(memory) {
+    if (window.confirm(`Supprimer définitivement « ${memory.title} » de la mémoire du Workspace ?`)) remove(memory.id);
+  }
   return <section className="memory-view" aria-labelledby="memory-title">
     <header className="memory-header"><div><span>WORKSPACE MEMORY</span><h2 id="memory-title">Mémoire explicite</h2><p>Des repères contrôlés pour {activeWorkspace?.name}, jamais ajoutés silencieusement.</p></div><Brain size={34} /></header>
     <form className="memory-composer" onSubmit={submit}>
@@ -32,6 +35,6 @@ export default function MemoryView() {
     </form>
     {(validation || error) && <div className="inline-error" role="alert">{validation || error}</div>}
     <div className="memory-section-heading"><div><span>MÉMOIRE DU WORKSPACE</span><h3>{memories.length} repère{memories.length === 1 ? "" : "s"}</h3></div><button type="button" onClick={refresh} aria-label="Actualiser la mémoire"><RefreshCw size={17} /></button></div>
-    {loading ? <div className="document-loading"><LoaderCircle className="spin" /> Chargement de Memory…</div> : <div className="memory-grid">{memories.length === 0 ? <div className="empty-state"><Brain size={30} /><h3>Aucune mémoire explicite</h3><p>Ajoutez uniquement les repères que Nova doit conserver dans ce Workspace.</p></div> : memories.map((memory) => <article className={`memory-card ${memory.active ? "is-active" : ""}`} key={memory.id}><div><span>{kindLabels[memory.kind] || memory.kind}</span><h3>{memory.title}</h3><p>{memory.content}</p></div><div className="memory-card__actions"><button type="button" onClick={() => toggle(memory)} disabled={mutationId === memory.id} aria-label={`${memory.active ? "Désactiver" : "Activer"} ${memory.title}`}><Power size={16} /></button><button type="button" onClick={() => remove(memory.id)} disabled={mutationId === memory.id} aria-label={`Supprimer ${memory.title}`}><Trash2 size={16} /></button></div></article>)}</div>}
+    {loading ? <div className="document-loading"><LoaderCircle className="spin" /> Chargement de Memory…</div> : <div className="memory-grid">{memories.length === 0 ? <div className="empty-state"><Brain size={30} /><h3>Aucune mémoire explicite</h3><p>Ajoutez uniquement les repères que Nova doit conserver dans ce Workspace.</p></div> : memories.map((memory) => <article className={`memory-card ${memory.active ? "is-active" : ""}`} key={memory.id}><div><span>{kindLabels[memory.kind] || memory.kind}</span><h3>{memory.title}</h3><p>{memory.content}</p></div><div className="memory-card__actions"><button type="button" onClick={() => toggle(memory)} disabled={mutationId === memory.id} aria-label={`${memory.active ? "Désactiver" : "Activer"} ${memory.title}`}><Power size={16} /></button><button type="button" onClick={() => confirmRemove(memory)} disabled={mutationId === memory.id} aria-label={`Supprimer ${memory.title}`}><Trash2 size={16} /></button></div></article>)}</div>}
   </section>;
 }

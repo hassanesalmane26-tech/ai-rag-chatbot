@@ -4,31 +4,32 @@
 
 GENESIS is the single-user, local edition of the TRIDENT AI Operating System.
 Its primary object is a **Workspace**; chat is one Workspace capability beside
-Knowledge. The product exposes only three functional modules: Home,
-Conversations, and Knowledge.
+Knowledge. The product exposes four functional modules: Home, Conversations,
+Knowledge, and explicit Memory.
 
 ```text
 Workspace
   ├─ Home: real counts and entry points
   ├─ Conversations: conversation history and AI messages
-  └─ Knowledge: Workspace-scoped source documents
+  ├─ Knowledge: Workspace-scoped source documents
+  └─ Memory: bounded, user-controlled Workspace context
 ```
 
-Every conversation, message, document, retrieval query, and citation is scoped
+Every conversation, message, document, memory, retrieval query, and citation is scoped
 by an opaque Workspace UUID. GENESIS has an implicit local owner only; that is
 not an authorization model and it must not be deployed publicly.
 
 ## Public API
 
 Product routes are nested below `/api/v1/workspaces/{workspace_id}`. The public
-resources are Workspace, Conversation, Message, Document, Citation, and an
+resources are Workspace, Conversation, Message, Document, Memory, Citation, and an
 Overview projection. API responses use `{ "data": ..., "meta": {} }`; errors
 use a stable `{ "error": { "code", "message", "request_id" } }` envelope.
 
 ## Data and component ownership
 
 The relational database is authoritative for Workspace metadata, conversations,
-messages, and document metadata. Workspace files are held behind a storage
+messages, document metadata, and explicit Memory. Workspace files are held behind a storage
 boundary; local disk is the GENESIS implementation. The vector index is derived
 from approved document content and can be rebuilt. The browser only owns
 presentation state and calls the API through one client module.
@@ -41,7 +42,9 @@ presentation state and calls the API through one client module.
 3. A message is persisted, retrieves chunks filtered by Workspace ID, invokes
    the AI provider through the conversation application flow, then stores the
    assistant response with citations.
-4. Home reads real counts from the same persisted resources.
+4. Active explicit memories are assembled under strict size limits as untrusted
+   contextual data; GENESIS never extracts memory automatically.
+5. Home reads real counts from the same persisted resources.
 
 ## Evolution contracts
 

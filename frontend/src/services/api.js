@@ -1,10 +1,28 @@
 const API = import.meta.env.VITE_API_BASE_URL || "/api";
+const REQUEST_TIMEOUT_MS = 30000;
+
+function requestId() {
+  return globalThis.crypto?.randomUUID?.() || `web-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
 
 async function request(url, options = {}) {
-  const response = await fetch(`${API}/v1${url}`, options);
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error?.message || `Erreur ${response.status}`);
-  return payload.data;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${API}/v1${url}`, {
+      ...options,
+      headers: { "X-Request-ID": requestId(), ...options.headers },
+      signal: controller.signal,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error?.message || `Erreur ${response.status}`);
+    return payload.data;
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error("Le service TRIDENT met trop de temps à répondre.");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export const listWorkspaces = () => request("/workspaces");

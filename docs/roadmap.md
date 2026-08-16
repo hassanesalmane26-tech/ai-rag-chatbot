@@ -8,7 +8,7 @@ delivery sequence. No runtime changes are made in this phase.
 **Exit criteria:** this documentation set and ADR 0001 exist; known prototype
 risks are recorded; implementation order is explicit.
 
-## Phase 1 — Production foundation (design complete; implementation pending explicit approval)
+## Phase 1 — Production foundation (core runtime foundation implemented)
 
 Establish configuration validation, application lifecycle, structured logging,
 health/readiness endpoints, API versioning, database migrations, automated
@@ -18,11 +18,17 @@ tests, CI quality gates, and a local containerized development environment.
 configuration; migrations replace startup schema creation; CI runs tests and
 lint; health contracts distinguish liveness from dependency readiness.
 
+Typed configuration, lifecycle, structured errors/logging, health contracts,
+dependency pins and Alembic are implemented. Container and CI delivery
+artifacts remain future operational work.
+
 ## GENESIS 1 — Workspace vertical slice (implemented)
 
 GENESIS delivers a persistent, Workspace-centric local experience with Home,
-Conversations, Knowledge, Workspace-scoped retrieval, and citations. It is the
-product vertical slice that precedes multi-user identity and durable ingestion.
+Conversations, Knowledge, Workspace-scoped retrieval, citations, explicit
+bounded Memory and a declarative module registry. Durable/idempotent local
+ingestion is implemented behind the Knowledge boundary. It remains the product
+vertical slice that precedes multi-user identity.
 
 **Known boundary:** GENESIS is single-user/local. It is not a public-production
 deployment until the roadmap security and production-foundation phases are done.

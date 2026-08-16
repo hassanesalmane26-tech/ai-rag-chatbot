@@ -20,10 +20,13 @@ Adoption is an explicit deployment operation, not application startup:
 3. Confirm the five GENESIS tables and row counts are unchanged.
 4. Run `alembic stamp 0001_genesis_baseline` once. Stamping creates only the
    Alembic version marker; it runs no baseline DDL.
-5. Run `alembic current` and the application integration tests.
+5. Run `alembic upgrade head` to apply only the reviewed additive revisions.
+6. Run `alembic current`, the read-only schema verifier, row-count checks and
+   the application integration tests.
 
 The application does not stamp or migrate automatically. In this implementation
-session the real VPS database is inspected only; it is not stamped or migrated.
+session the real VPS database was initially inspected only. Any later adoption
+must be recorded in the final operational report with its backup and checks.
 The baseline downgrade intentionally refuses to drop tables.
 
 ## Compatibility
