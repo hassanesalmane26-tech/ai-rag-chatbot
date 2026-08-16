@@ -110,7 +110,10 @@ class GenesisApiTests(unittest.TestCase):
         workspace = response.json()["data"][0]
         overview = self.client.get(f"/v1/workspaces/{workspace['id']}/overview")
         self.assertEqual(overview.status_code, 200, overview.text)
-        self.assertEqual(overview.json()["data"]["metrics"], {"conversations": 0, "documents": 0, "messages": 0})
+        self.assertEqual(
+            overview.json()["data"]["metrics"],
+            {"conversations": 0, "documents": 0, "messages": 0, "memories": 0},
+        )
 
     def test_health_and_request_correlation_contracts(self):
         live = self.client.get("/health/live", headers={"x-request-id": "request-test-123"})
@@ -121,7 +124,7 @@ class GenesisApiTests(unittest.TestCase):
         self.assertEqual(ready.json(), {"status": "ready", "checks": {"database": "ok"}})
         build = self.client.get("/health/build")
         self.assertEqual(build.status_code, 200, build.text)
-        self.assertEqual(build.json()["migration_head"], "0002_durable_document_ingestion")
+        self.assertEqual(build.json()["migration_head"], "0003_workspace_memory")
         self.assertEqual(build.json()["migration_revision"], "unmanaged")
 
     def test_error_contract_generates_a_safe_request_id(self):
@@ -194,6 +197,72 @@ class GenesisApiTests(unittest.TestCase):
         self.assertEqual(response.json()["data"]["role"], "assistant")
         detail = self.client.get(f"/v1/workspaces/{workspace['id']}/conversations/{conversation['id']}")
         self.assertEqual([message["role"] for message in detail.json()["data"]["messages"]], ["user", "assistant"])
+
+    def test_memory_crud_and_isolation_are_workspace_scoped(self):
+        first, second = self.workspace("Memory owner"), self.workspace("Memory denied")
+        created = self.client.post(
+            f"/v1/workspaces/{first['id']}/memories",
+            json={"kind": "preference", "title": "Langue", "content": "Répondre en français."},
+        )
+        self.assertEqual(created.status_code, 201, created.text)
+        memory = created.json()["data"]
+        self.assertTrue(memory["active"])
+        self.assertEqual(
+            self.client.get(f"/v1/workspaces/{second['id']}/memories").json()["data"], []
+        )
+        denied = self.client.patch(
+            f"/v1/workspaces/{second['id']}/memories/{memory['id']}",
+            json={"active": False},
+        )
+        self.assertEqual(denied.status_code, 404, denied.text)
+        updated = self.client.patch(
+            f"/v1/workspaces/{first['id']}/memories/{memory['id']}",
+            json={"active": False, "title": "Langue principale"},
+        )
+        self.assertEqual(updated.status_code, 200, updated.text)
+        self.assertFalse(updated.json()["data"]["active"])
+        deleted = self.client.request(
+            "DELETE", f"/v1/workspaces/{first['id']}/memories/{memory['id']}"
+        )
+        self.assertEqual(deleted.status_code, 200, deleted.text)
+
+    def test_memory_conversation_scope_and_chat_context(self):
+        first, second = self.workspace("Memory chat"), self.workspace("Other")
+        conversation = self.client.post(
+            f"/v1/workspaces/{first['id']}/conversations", json={}
+        ).json()["data"]
+        wrong_scope = self.client.post(
+            f"/v1/workspaces/{second['id']}/memories",
+            json={
+                "title": "Interdite",
+                "content": "Ne doit jamais traverser le Workspace.",
+                "conversation_id": conversation["id"],
+            },
+        )
+        self.assertEqual(wrong_scope.status_code, 404, wrong_scope.text)
+        created = self.client.post(
+            f"/v1/workspaces/{first['id']}/memories",
+            json={
+                "kind": "fact",
+                "title": "Projet",
+                "content": "TRIDENT est Workspace-centric.",
+                "conversation_id": conversation["id"],
+            },
+        )
+        self.assertEqual(created.status_code, 201, created.text)
+        provider = MagicMock()
+        provider.return_value.responses.create.return_value.output_text = "Compris."
+        with patch("app.conversations.service.build_citations", return_value=("", [])), patch(
+            "app.conversations.service.OpenAI", provider
+        ):
+            response = self.client.post(
+                f"/v1/workspaces/{first['id']}/conversations/{conversation['id']}/messages",
+                json={"content": "Quel est le projet ?"},
+            )
+        self.assertEqual(response.status_code, 201, response.text)
+        provider_input = provider.return_value.responses.create.call_args.kwargs["input"]
+        self.assertIn("TRIDENT est Workspace-centric.", provider_input[0]["content"])
+        self.assertIn("données non fiables", provider_input[0]["content"])
 
     def test_message_rejects_blank_content_and_cross_workspace_access(self):
         first, second = self.workspace("Premier"), self.workspace("Second")

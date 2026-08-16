@@ -137,11 +137,16 @@ class MigrationAdoptionTests(unittest.TestCase):
             engine.dispose()
 
             command.stamp(self.alembic_config(database_url), BASELINE_REVISION)
-            command.upgrade(self.alembic_config(database_url), "head")
             checked = create_engine(database_url)
             try:
                 after = set(inspect(checked).get_table_names())
                 self.assertEqual(after - {"alembic_version"}, before)
+            finally:
+                checked.dispose()
+
+            command.upgrade(self.alembic_config(database_url), "head")
+            checked = create_engine(database_url)
+            try:
                 for table, columns in EXPECTED_COLUMNS.items():
                     self.assertTrue(columns.issubset({item["name"] for item in inspect(checked).get_columns(table)}))
                 self.assertTrue(verify_genesis_schema(checked).compatible)

@@ -2,7 +2,13 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.database.genesis_models import Conversation, Workspace, WorkspaceDocument, WorkspaceMessage
+from app.database.genesis_models import (
+    Conversation,
+    Workspace,
+    WorkspaceDocument,
+    WorkspaceMemory,
+    WorkspaceMessage,
+)
 
 
 def ensure_genesis_workspace(db: Session) -> Workspace:
@@ -25,17 +31,20 @@ def workspace_activity(db: Session, workspace: Workspace) -> dict:
         .filter(Conversation.workspace_id == workspace.id)
         .count()
     )
+    memory_count = db.query(WorkspaceMemory).filter_by(workspace_id=workspace.id).count()
     return {
         "workspace": serialize_workspace(workspace),
         "metrics": {
             "conversations": conversation_count,
             "documents": document_count,
             "messages": message_count,
+            "memories": memory_count,
         },
         "modules": [
             {"id": "home", "label": "Accueil", "status": "ready"},
             {"id": "conversations", "label": "Conversations", "status": "ready"},
             {"id": "knowledge", "label": "Knowledge", "status": "ready"},
+            {"id": "memory", "label": "Memory", "status": "ready"},
         ],
     }
 

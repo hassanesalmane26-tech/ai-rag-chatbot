@@ -6,7 +6,7 @@ extended with organizations and members in TRIDENT AI without changing public ID
 
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.sql import func
 
 from app.database.database import Base
@@ -81,4 +81,22 @@ class WorkspaceDocument(Base):
             "content_hash",
             unique=True,
         ),
+    )
+
+
+class WorkspaceMemory(Base):
+    __tablename__ = "workspace_memories"
+
+    id = Column(String(36), primary_key=True, default=new_id)
+    workspace_id = Column(String(36), ForeignKey("workspaces.id"), nullable=False, index=True)
+    conversation_id = Column(
+        String(36), ForeignKey("conversations.id"), nullable=True, index=True
+    )
+    kind = Column(String(24), nullable=False, default="note")
+    title = Column(String(160), nullable=False)
+    content = Column(Text, nullable=False)
+    active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )

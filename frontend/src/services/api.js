@@ -31,3 +31,11 @@ export async function uploadDocument(workspaceId, file) {
   const form = new FormData(); form.append("file", file);
   return request(`/workspaces/${workspaceId}/documents`, { method: "POST", body: form });
 }
+export const listMemories = (workspaceId) => request(`/workspaces/${workspaceId}/memories`);
+export const createMemory = (workspaceId, payload) => request(`/workspaces/${workspaceId}/memories`, {
+  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+});
+export const updateMemory = (workspaceId, memoryId, payload) => request(`/workspaces/${workspaceId}/memories/${memoryId}`, {
+  method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+});
+export const deleteMemory = (workspaceId, memoryId) => request(`/workspaces/${workspaceId}/memories/${memoryId}`, { method: "DELETE" });

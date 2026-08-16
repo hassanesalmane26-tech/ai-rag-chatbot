@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, House, MessageSquarePlus, MessagesSquare } from "lucide-react";
+import { BookOpen, Brain, House, MessageSquarePlus, MessagesSquare } from "lucide-react";
 import useWorkspaceContext from "../hooks/useWorkspaceContext";
 import WorkspaceSelector from "./workspace/WorkspaceSelector";
 import TridentMark from "./visual/TridentMark";
@@ -8,6 +8,7 @@ const items = [
   ["home", "Accueil", House],
   ["conversations", "Conversations", MessagesSquare],
   ["knowledge", "Knowledge", BookOpen],
+  ["memory", "Memory", Brain],
 ];
 
 export default function Sidebar() {

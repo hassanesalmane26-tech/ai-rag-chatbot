@@ -7,3 +7,4 @@ Naming: `NNNN-short-title.md`. Each ADR states context, decision, consequences,
 status, owner, and review trigger.
 
 - [ADR 0007 — Recoverable idempotent ingestion](0007-recoverable-idempotent-ingestion.md)
+- [ADR 0008 — Explicit Workspace memory](0008-explicit-workspace-memory.md)

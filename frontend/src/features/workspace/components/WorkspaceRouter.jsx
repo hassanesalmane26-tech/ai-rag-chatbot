@@ -2,6 +2,7 @@ import useWorkspaceContext from "../../../hooks/useWorkspaceContext";
 import WorkspaceHome from "../../home/WorkspaceHome";
 import ConversationsView from "../../chat/ConversationsView";
 import DocumentsView from "../../documents/DocumentsView";
+import MemoryView from "../../memory/MemoryView";
 
 export default function WorkspaceRouter() {
   const { activeView, activeWorkspace, loading, error, refreshWorkspaces } = useWorkspaceContext();
@@ -10,5 +11,6 @@ export default function WorkspaceRouter() {
   if (!activeWorkspace) return <section className="empty-state"><h2>Aucun Workspace actif</h2><p>Créez ou sélectionnez un Workspace pour continuer.</p></section>;
   if (activeView === "conversations") return <ConversationsView key={activeWorkspace.id} workspaceId={activeWorkspace.id} />;
   if (activeView === "knowledge") return <DocumentsView />;
+  if (activeView === "memory") return <MemoryView />;
   return <WorkspaceHome />;
 }

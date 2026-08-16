@@ -18,6 +18,7 @@ from app.core.errors import APIError
 from app.core.logging import configure_logging
 from app.database.database import engine
 from app.database.schema import HEAD_REVISION
+from app.memory.router import router as memory_router
 
 logger = logging.getLogger("trident.api")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{8,128}$")
@@ -144,6 +145,7 @@ def create_app(runtime_settings: Settings = settings, database_engine: Engine = 
         }
 
     application.include_router(genesis_router)
+    application.include_router(memory_router)
     return application
 
 

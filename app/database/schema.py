@@ -9,15 +9,18 @@ from app.database.database import Base
 from app.database import genesis_models, models  # noqa: F401 - register metadata
 
 BASELINE_REVISION = "0001_genesis_baseline"
-HEAD_REVISION = "0002_durable_document_ingestion"
+HEAD_REVISION = "0003_workspace_memory"
 CURRENT_COLUMNS = {
     table.name: {column.name for column in table.columns}
     for table in Base.metadata.sorted_tables
 }
 BASELINE_COLUMNS = {
-    **CURRENT_COLUMNS,
+    **{name: columns for name, columns in CURRENT_COLUMNS.items() if name != "workspace_memories"},
     "workspace_documents": CURRENT_COLUMNS["workspace_documents"]
     - {"content_hash", "version", "ingestion_attempts", "chunk_count", "updated_at"},
+}
+DURABLE_INGESTION_COLUMNS = {
+    name: columns for name, columns in CURRENT_COLUMNS.items() if name != "workspace_memories"
 }
 EXPECTED_COLUMNS = CURRENT_COLUMNS
 
@@ -37,9 +40,12 @@ def verify_genesis_schema(
     engine: Engine, target_revision: str = HEAD_REVISION
 ) -> SchemaVerification:
     """Compare the mapped baseline without performing DDL or data writes."""
-    expected_columns = (
-        BASELINE_COLUMNS if target_revision == BASELINE_REVISION else CURRENT_COLUMNS
-    )
+    if target_revision == BASELINE_REVISION:
+        expected_columns = BASELINE_COLUMNS
+    elif target_revision == "0002_durable_document_ingestion":
+        expected_columns = DURABLE_INGESTION_COLUMNS
+    else:
+        expected_columns = CURRENT_COLUMNS
     inspector = inspect(engine)
     actual_tables = set(inspector.get_table_names())
     expected_tables = set(expected_columns)
