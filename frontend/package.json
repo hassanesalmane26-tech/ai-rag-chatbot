@@ -8,6 +8,8 @@
     "build": "vite build",
     "lint": "oxlint",
     "test:chat": "node src/features/chat/useWorkspaceConversations.test.js",
+    "test:documents": "node src/features/documents/documentState.test.js",
+    "test": "npm run test:chat && npm run test:documents",
     "preview": "vite preview"
   },
   "dependencies": {

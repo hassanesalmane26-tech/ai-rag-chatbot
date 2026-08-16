@@ -21,7 +21,7 @@ from langchain_core.documents import Document
 from app.main import app
 from app.database.database import Base, SessionLocal, engine
 from app.database.genesis_models import Workspace, WorkspaceDocument
-from app.knowledge.service import create_document, delete_document
+from app.knowledge.service import MAX_UPLOAD_BYTES, create_document, delete_document
 from app.rag.search import search_workspace_documents
 
 
@@ -232,6 +232,60 @@ class GenesisApiTests(unittest.TestCase):
         second_documents = self.client.get(f"/v1/workspaces/{second['id']}/documents")
         self.assertEqual(second_documents.status_code, 200, second_documents.text)
         self.assertEqual(second_documents.json()["data"], [])
+
+    def test_document_upload_rejects_empty_content(self):
+        workspace = self.workspace()
+        rejected = self.client.post(
+            f"/v1/workspaces/{workspace['id']}/documents",
+            files={"file": ("empty.txt", b"", "text/plain")},
+        )
+        self.assertEqual(rejected.status_code, 422, rejected.text)
+        self.assertEqual(rejected.json()["error"]["code"], "UNPROCESSABLE_ENTITY")
+        listed = self.client.get(f"/v1/workspaces/{workspace['id']}/documents")
+        self.assertEqual(listed.json()["data"], [])
+
+    def test_document_upload_rejects_content_above_limit(self):
+        workspace = self.workspace()
+        rejected = self.client.post(
+            f"/v1/workspaces/{workspace['id']}/documents",
+            files={"file": ("too-large.txt", b"x" * (MAX_UPLOAD_BYTES + 1), "text/plain")},
+        )
+        self.assertEqual(rejected.status_code, 413, rejected.text)
+        self.assertEqual(rejected.json()["error"]["code"], "PAYLOAD_TOO_LARGE")
+        listed = self.client.get(f"/v1/workspaces/{workspace['id']}/documents")
+        self.assertEqual(listed.json()["data"], [])
+
+    def test_document_delete_is_scoped_to_its_workspace(self):
+        first, second = self.workspace("Premier"), self.workspace("Second")
+        db = SessionLocal()
+        try:
+            document = WorkspaceDocument(
+                workspace_id=first["id"], display_name="private.txt", storage_name="private.txt",
+                media_type="text/plain", size_bytes=7, status="indexed",
+            )
+            db.add(document)
+            db.commit()
+            db.refresh(document)
+            document_id = document.id
+        finally:
+            db.close()
+
+        denied = self.client.request(
+            "DELETE", f"/v1/workspaces/{second['id']}/documents/{document_id}"
+        )
+        self.assertEqual(denied.status_code, 404, denied.text)
+        still_visible = self.client.get(f"/v1/workspaces/{first['id']}/documents")
+        self.assertEqual([item["id"] for item in still_visible.json()["data"]], [document_id])
+
+        with tempfile.TemporaryDirectory() as tempdir, patch(
+            "app.knowledge.service.DOCUMENTS_ROOT", Path(tempdir)
+        ), patch("app.knowledge.service.vectorstore"):
+            deleted = self.client.request(
+                "DELETE", f"/v1/workspaces/{first['id']}/documents/{document_id}"
+            )
+        self.assertEqual(deleted.status_code, 200, deleted.text)
+        self.assertEqual(deleted.json()["data"], {"id": document_id, "deleted": True})
+        self.assertEqual(self.client.get(f"/v1/workspaces/{first['id']}/documents").json()["data"], [])
 
     def test_knowledge_to_conversation_flow_keeps_workspace_scope_and_citations(self):
         workspace = self.workspace("Knowledge E2E")

@@ -16,6 +16,7 @@ are updated before significant implementation changes are made.
 | [Phase 1 specification](phases/phase-1-production-foundation.md) | Detailed production-foundation design; not implementation authorization. |
 | [Sprint 1 stabilization](phases/sprint-1-stabilization.md) | Verification scope and intentionally deferred GENESIS work. |
 | [Sprint 2 visual system](phases/sprint-2-visual-system.md) | Reusable visual identity, motion, and accessibility architecture. |
+| [Sprint 6 Documents Engine](phases/sprint-6-documents.md) | Workspace-scoped document interaction and state architecture. |
 
 ## Documentation rule
 

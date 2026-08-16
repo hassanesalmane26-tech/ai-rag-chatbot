@@ -1,72 +1,62 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { FileText, Trash2, Upload } from "lucide-react";
+import { useRef, useState } from "react";
+import { AlertTriangle, FileText, LoaderCircle, RefreshCw, ShieldCheck, Trash2, Upload } from "lucide-react";
 import useWorkspaceContext from "../../hooks/useWorkspaceContext";
-import { deleteDocument, listDocuments, uploadDocument } from "../../services/api";
+import {
+  documentStatusLabel,
+  formatDocumentSize,
+} from "./documentState";
+import useWorkspaceDocuments from "./useWorkspaceDocuments";
 
 export default function DocumentsView() {
-  const { activeWorkspaceId } = useWorkspaceContext();
-  const [documents, setDocuments] = useState([]);
-  const [pendingWorkspaceId, setPendingWorkspaceId] = useState(null);
-  const [error, setError] = useState("");
-  const activeWorkspaceRef = useRef(activeWorkspaceId);
-  const requestVersionRef = useRef(0);
+  const { activeWorkspace, activeWorkspaceId } = useWorkspaceContext();
+  const { documents, loading, uploading, deletingId, error, refresh, uploadDocument, deleteDocument } = useWorkspaceDocuments(activeWorkspaceId);
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef(null);
 
-  useEffect(() => {
-    activeWorkspaceRef.current = activeWorkspaceId;
-  }, [activeWorkspaceId]);
+  async function importFile(file) {
+    const imported = await uploadDocument(file);
+    if (imported && inputRef.current) inputRef.current.value = "";
+  }
 
-  const refresh = useCallback(async () => {
-    if (!activeWorkspaceId) {
-      setDocuments([]);
-      return;
-    }
-    const request = ++requestVersionRef.current;
-    const values = await listDocuments(activeWorkspaceId);
-    if (request !== requestVersionRef.current || activeWorkspaceRef.current !== activeWorkspaceId) return;
-    setDocuments(values);
-  }, [activeWorkspaceId]);
-
-  useEffect(() => {
-    setDocuments([]);
-    setError("");
-    refresh().catch((err) => {
-      if (activeWorkspaceRef.current === activeWorkspaceId) setError(err.message);
-    });
-    return () => { requestVersionRef.current += 1; };
-  }, [activeWorkspaceId, refresh]);
-
-  async function addFile(event) {
+  function chooseFile(event) {
     const file = event.target.files?.[0];
-    const workspaceId = activeWorkspaceId;
-    if (!file || !workspaceId) return;
-    setPendingWorkspaceId(workspaceId);
-    setError("");
-    try {
-      const document = await uploadDocument(workspaceId, file);
-      if (activeWorkspaceRef.current === workspaceId) setDocuments((items) => [document, ...items]);
-    } catch (err) {
-      if (activeWorkspaceRef.current === workspaceId) setError(err.message);
-    } finally {
-      setPendingWorkspaceId((current) => current === workspaceId ? null : current);
-      event.target.value = "";
+    if (file) importFile(file);
+  }
+
+  function dropFile(event) {
+    event.preventDefault();
+    setDragging(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) importFile(file);
+  }
+
+  function remove(document) {
+    if (window.confirm(`Supprimer définitivement « ${document.display_name} » de ce Workspace ?`)) {
+      deleteDocument(document.id);
     }
   }
 
-  async function remove(document) {
-    const workspaceId = activeWorkspaceId;
-    if (!workspaceId || !window.confirm(`Supprimer ${document.display_name} ?`)) return;
-    setPendingWorkspaceId(workspaceId);
-    setError("");
-    try {
-      await deleteDocument(workspaceId, document.id);
-      if (activeWorkspaceRef.current === workspaceId) setDocuments((items) => items.filter((item) => item.id !== document.id));
-    } catch (err) {
-      if (activeWorkspaceRef.current === workspaceId) setError(err.message);
-    } finally {
-      setPendingWorkspaceId((current) => current === workspaceId ? null : current);
-    }
-  }
+  return <section className="knowledge-view" aria-labelledby="knowledge-title">
+    <header className="knowledge-header">
+      <div><span>KNOWLEDGE ENGINE</span><h2 id="knowledge-title">Connaissances du Workspace</h2><p>Une bibliothèque privée et contextualisée pour {activeWorkspace?.name}.</p></div>
+      <div className="knowledge-summary" aria-label={`${documents.length} documents dans le Workspace`}><strong>{documents.length}</strong><span>source{documents.length === 1 ? "" : "s"} active{documents.length === 1 ? "" : "s"}</span></div>
+    </header>
 
-  const busy = pendingWorkspaceId === activeWorkspaceId;
-  return <section className="knowledge-view"><header><div><span>KNOWLEDGE</span><h2>Connaissances du Workspace</h2><p>Les documents importés sont disponibles pour les conversations de cet espace.</p></div><label className="upload-action"><Upload size={17} /> {busy ? "Indexation…" : "Importer"}<input type="file" accept=".pdf,.txt,.docx" onChange={addFile} disabled={busy} /></label></header>{error && <p className="inline-error" role="alert">{error}</p>}<div className="document-grid">{documents.length === 0 ? <div className="empty-state"><FileText size={30} /><h3>Knowledge est vide</h3><p>Importez un document pour enrichir ce Workspace.</p></div> : documents.map((document) => <article key={document.id} className="document-card"><FileText size={24} /><div><strong>{document.display_name}</strong><span>{Math.ceil(document.size_bytes / 1024)} Ko · {document.status === "indexed" ? "Prêt pour Nova" : document.status}</span></div><button type="button" onClick={() => remove(document)} aria-label={`Supprimer ${document.display_name}`} disabled={busy}><Trash2 size={16} /></button></article>)}</div></section>;
+    <div className={`document-dropzone ${dragging ? "is-dragging" : ""}`} onDragEnter={(event) => { event.preventDefault(); setDragging(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDragging(false); }} onDrop={dropFile}>
+      <div className="document-dropzone__icon" aria-hidden="true">{uploading ? <LoaderCircle className="spin" /> : <Upload />}</div>
+      <div><h3>{uploading ? "Indexation dans le Workspace…" : "Ajoutez une source à votre Workspace"}</h3><p>PDF, TXT ou DOCX · 20 Mo maximum</p></div>
+      <label className="upload-action">{uploading ? "Traitement…" : "Choisir un document"}<input ref={inputRef} type="file" accept=".pdf,.txt,.docx" onChange={chooseFile} disabled={uploading} /></label>
+    </div>
+
+    {error && <div className="inline-error document-error" role="alert"><AlertTriangle size={18} /><span>{error}</span><button type="button" onClick={refresh} disabled={loading}>Réessayer</button></div>}
+
+    <div className="document-section-heading"><div><span>BIBLIOTHÈQUE DU WORKSPACE</span><h3>Sources disponibles</h3></div>{!loading && documents.length > 0 && <button type="button" className="document-refresh" onClick={refresh} aria-label="Actualiser les documents"><RefreshCw size={16} /> Actualiser</button>}</div>
+
+    {loading ? <div className="document-loading" aria-live="polite"><LoaderCircle className="spin" /><span>Synchronisation de Knowledge…</span></div> : <div className="document-grid">{documents.length === 0 ? <div className="empty-state"><FileText size={30} /><h3>Knowledge est vide</h3><p>Importez une source pour donner à Nova le contexte de ce Workspace.</p></div> : documents.map((document) => <article key={document.id} className={`document-card document-card--${document.status}`}>
+      <div className="document-card__icon"><FileText size={22} /></div>
+      <div className="document-card__body"><strong title={document.display_name}>{document.display_name}</strong><span>{formatDocumentSize(document.size_bytes)} · {documentStatusLabel(document.status)}</span>{document.error_message && <small>{document.error_message}</small>}</div>
+      <div className="document-card__status" title={documentStatusLabel(document.status)}>{document.status === "failed" ? <AlertTriangle size={15} /> : <ShieldCheck size={15} />}<span>{document.status === "indexed" ? "INDEXÉ" : document.status.toUpperCase()}</span></div>
+      <button className="document-card__delete" type="button" onClick={() => remove(document)} aria-label={`Supprimer ${document.display_name}`} disabled={Boolean(deletingId) || uploading}>{deletingId === document.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}</button>
+    </article>)}</div>}
+  </section>;
 }
