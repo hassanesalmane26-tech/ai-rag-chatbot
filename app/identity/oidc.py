@@ -67,7 +67,9 @@ class OIDCIdentityVerifier:
                 )
             return self._jwks_client
 
-    def _verify_sync(self, credential: str) -> VerifiedExternalIdentity:
+    def _verify_sync(
+        self, credential: str, expected_nonce: str | None = None
+    ) -> VerifiedExternalIdentity:
         try:
             header = jwt.get_unverified_header(credential)
             algorithm = header.get("alg")
@@ -87,6 +89,8 @@ class OIDCIdentityVerifier:
             subject = str(claims["sub"]).strip()
             if issuer != self.issuer or not subject:
                 raise InvalidIdentityCredential("Invalid identity claims")
+            if expected_nonce is not None and claims.get("nonce") != expected_nonce:
+                raise InvalidIdentityCredential("OIDC nonce mismatch")
             return VerifiedExternalIdentity(issuer=issuer, subject=subject)
         except InvalidIdentityCredential:
             raise
@@ -95,3 +99,8 @@ class OIDCIdentityVerifier:
 
     async def verify(self, credential: str) -> VerifiedExternalIdentity:
         return await asyncio.to_thread(self._verify_sync, credential)
+
+    async def verify_id_token(
+        self, credential: str, expected_nonce: str
+    ) -> VerifiedExternalIdentity:
+        return await asyncio.to_thread(self._verify_sync, credential, expected_nonce)

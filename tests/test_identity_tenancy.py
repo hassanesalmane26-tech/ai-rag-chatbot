@@ -15,7 +15,7 @@ from app.identity.contracts import (
     VerifiedExternalIdentity,
 )
 from app.identity.models import ExternalIdentity, User
-from app.identity.service import resolve_principal
+from app.identity.service import resolve_or_create_principal, resolve_principal
 from app.tenancy.models import Membership, MembershipRole, Organization
 from app.tenancy.service import (
     LEGACY_ORGANIZATION_ID,
@@ -85,6 +85,18 @@ class IdentityTenancyTests(unittest.TestCase):
                     issuer="https://issuer.example", subject="stable-subject"
                 ),
             )
+
+    def test_verified_identity_jit_creation_grants_no_membership(self):
+        principal = resolve_or_create_principal(
+            self.db,
+            VerifiedExternalIdentity(
+                issuer="https://issuer.example", subject="new-verified-subject"
+            ),
+        )
+        self.assertIsNotNone(self.db.get(User, principal.user_id))
+        self.assertEqual(
+            self.db.query(Membership).filter_by(user_id=principal.user_id).count(), 0
+        )
 
     def test_membership_roles_and_uniqueness_are_bounded(self):
         user = User()

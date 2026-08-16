@@ -1,4 +1,8 @@
 import { WorkspaceProvider } from "./context/WorkspaceContext";
+import { SessionProvider } from "./context/SessionContext";
+import useSessionContext from "./hooks/useSessionContext";
+import EntryExperience from "./features/session/EntryExperience";
+import { canEnterWorkspace } from "./features/session/sessionState";
 
 import "./App.css";
 
@@ -15,12 +19,16 @@ function WorkspaceContent() {
   );
 }
 
+function SessionGate() {
+  const { state, session } = useSessionContext();
+  if (!canEnterWorkspace(state, session)) return <EntryExperience />;
+  return <WorkspaceProvider><MainLayout><WorkspaceContent /></MainLayout></WorkspaceProvider>;
+}
+
 export default function App() {
   return (
-    <WorkspaceProvider>
-      <MainLayout>
-        <WorkspaceContent />
-      </MainLayout>
-    </WorkspaceProvider>
+    <SessionProvider>
+      <SessionGate />
+    </SessionProvider>
   );
 }

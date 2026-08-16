@@ -11,3 +11,4 @@ status, owner, and review trigger.
 - [ADR 0009 — Declarative module registry](0009-declarative-module-registry.md)
 - [ADR 0010 — Provider-agnostic identity and Organization ownership](0010-provider-agnostic-identity-boundary.md)
 - [ADR 0011 — Verified OIDC and centralized tenant authorization](0011-verified-oidc-and-central-tenant-authorization.md)
+- [ADR 0012 — Authorization Code + PKCE and opaque application sessions](0012-authorization-code-pkce-and-opaque-sessions.md)

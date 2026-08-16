@@ -1,5 +1,6 @@
 import {
   Bell,
+  LogOut,
   PanelsTopLeft,
   Search,
   Sparkles,
@@ -7,11 +8,13 @@ import {
 } from "lucide-react";
 import TridentMark from "../visual/TridentMark";
 import IconButton from "../ui/IconButton";
+import useSessionContext from "../../hooks/useSessionContext";
 
 export default function Header({
   title = "TRIDENT",
   onOpenWorkspaces,
 }) {
+  const { logout } = useSessionContext();
   return (
     <header className="topbar">
       <div className="topbar-left">
@@ -49,6 +52,9 @@ export default function Header({
 
         <IconButton className="profile-btn" aria-label="Profil indisponible dans Genesis" title="Indisponible dans Genesis" disabled>
           <UserCircle2 size={22} />
+        </IconButton>
+        <IconButton className="icon-btn" aria-label="Se déconnecter" title="Se déconnecter" onClick={() => logout().catch(() => {})}>
+          <LogOut size={18} />
         </IconButton>
       </div>
     </header>

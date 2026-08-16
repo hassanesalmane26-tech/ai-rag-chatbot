@@ -93,6 +93,8 @@ class SettingsTests(unittest.TestCase):
             TRIDENT_SECURITY_MODE="oidc",
             TRIDENT_OIDC_ISSUER="https://issuer.example",
             TRIDENT_OIDC_AUDIENCE="trident-api",
+            TRIDENT_OIDC_CLIENT_ID="trident-browser",
+            TRIDENT_OIDC_REDIRECT_URI="https://app.example/api/v1/session/callback",
             TRIDENT_CORS_ALLOWED_ORIGINS="https://app.example",
             _env_file=None,
         )

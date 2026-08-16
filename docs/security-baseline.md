@@ -13,8 +13,10 @@ authorization. With the safe `disabled` default, `/api/v1` now fails closed
 instead of exposing business data anonymously. The deployment still proxies a
 Vite development server and uses local disk for originals and Chroma. It must
 not receive sensitive or private data. TRIDENT AI production remains NO-GO
-until AI-3 supplies a real issuer/session and controlled bootstrap claim, and
-an approved domain enables TLS.
+until a real issuer/client is configured, the controlled bootstrap claim is
+performed, and an approved domain enables TLS. AI-3 implements the complete
+Authorization Code + PKCE and opaque-session boundary, but does not invent
+those deployment inputs.
 
 AI-0 restricts owner-controlled local secret/data permissions and records the
 required edge hardening. It does not add fake authentication or claim that a
@@ -22,7 +24,8 @@ Workspace UUID is an access control.
 
 ## Mandatory controls by Phase 3
 
-- Real OIDC deployment/session (AI-2 verification and Workspace authorization are implemented).
+- Real OIDC deployment (AI-2 verification/authorization and AI-3 session
+  architecture are implemented; provider registration is pending).
 - Runtime secrets from a managed secret store; rotation and no secret logging.
 - TLS in transit and managed encryption at rest for database/object/vector data.
 - File size/type allowlists, generated object names, malware scanning, isolated

@@ -75,6 +75,24 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("TRIDENT_OIDC_AUDIENCE", "OIDC_AUDIENCE"),
     )
+    oidc_client_id: str = Field(
+        default="",
+        validation_alias=AliasChoices("TRIDENT_OIDC_CLIENT_ID", "OIDC_CLIENT_ID"),
+    )
+    oidc_redirect_uri: str = Field(
+        default="",
+        validation_alias=AliasChoices("TRIDENT_OIDC_REDIRECT_URI", "OIDC_REDIRECT_URI"),
+    )
+    oidc_post_logout_redirect_uri: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "TRIDENT_OIDC_POST_LOGOUT_REDIRECT_URI", "OIDC_POST_LOGOUT_REDIRECT_URI"
+        ),
+    )
+    oidc_scopes: str = Field(
+        default="openid profile",
+        validation_alias=AliasChoices("TRIDENT_OIDC_SCOPES", "OIDC_SCOPES"),
+    )
     oidc_jwks_url: str = Field(
         default="",
         validation_alias=AliasChoices("TRIDENT_OIDC_JWKS_URL", "OIDC_JWKS_URL"),
@@ -101,6 +119,24 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("TRIDENT_CORS_ALLOWED_ORIGINS", "CORS_ALLOWED_ORIGINS"),
     )
+    session_ttl_seconds: int = Field(
+        default=28800,
+        ge=300,
+        le=86400,
+        validation_alias=AliasChoices("TRIDENT_SESSION_TTL_SECONDS", "SESSION_TTL_SECONDS"),
+    )
+    login_transaction_ttl_seconds: int = Field(
+        default=600,
+        ge=60,
+        le=1800,
+        validation_alias=AliasChoices(
+            "TRIDENT_LOGIN_TRANSACTION_TTL_SECONDS", "LOGIN_TRANSACTION_TTL_SECONDS"
+        ),
+    )
+    session_cookie_secure: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("TRIDENT_SESSION_COOKIE_SECURE", "SESSION_COOKIE_SECURE"),
+    )
 
     model_config = SettingsConfigDict(extra="ignore", populate_by_name=True)
 
@@ -117,6 +153,14 @@ class Settings(BaseSettings):
                 raise ValueError("OIDC issuer and audience are required in OIDC mode")
             if not self.oidc_issuer.startswith("https://"):
                 raise ValueError("OIDC issuer must use HTTPS")
+        if self.environment in {"staging", "production"}:
+            if not self.oidc_client_id.strip() or not self.oidc_redirect_uri.strip():
+                raise ValueError("OIDC client ID and redirect URI are required")
+            if not self.session_cookie_secure:
+                raise ValueError("Secure session cookies are required outside development/test")
+            if not self.oidc_redirect_uri.startswith("https://"):
+                raise ValueError("OIDC redirect URI must use HTTPS outside development/test")
+        self.oidc_scope_values()
         algorithms = self.allowed_oidc_algorithms()
         supported = {"RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512"}
         if not algorithms or any(algorithm not in supported for algorithm in algorithms):
@@ -133,6 +177,20 @@ class Settings(BaseSettings):
 
     def allowed_cors_origins(self) -> tuple[str, ...]:
         return tuple(item.strip().rstrip("/") for item in self.cors_allowed_origins.split(",") if item.strip())
+
+    def oidc_scope_values(self) -> tuple[str, ...]:
+        scopes = tuple(item for item in self.oidc_scopes.split() if item)
+        if "openid" not in scopes:
+            raise ValueError("OIDC scopes must include openid")
+        return scopes
+
+    @property
+    def interactive_session_enabled(self) -> bool:
+        return bool(
+            self.security_mode == "oidc"
+            and self.oidc_client_id.strip()
+            and self.oidc_redirect_uri.strip()
+        )
 
     def openai_key(self) -> str:
         """Return the provider key only at the provider boundary."""

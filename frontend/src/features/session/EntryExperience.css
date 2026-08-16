@@ -1,0 +1,11 @@
+.entry-experience { position: relative; min-height: 100vh; display: grid; place-items: center; overflow: hidden; padding: 24px; background: var(--ink-950); color: var(--text-primary); }
+.entry-panel { position: relative; z-index: 2; width: min(620px, 100%); padding: clamp(28px, 6vw, 56px); text-align: center; }
+.entry-panel h1 { margin: 18px 0 10px; font-size: clamp(1.8rem, 5vw, 3rem); }
+.entry-panel p { color: var(--text-secondary); line-height: 1.6; }
+.entry-kicker { display: block; margin-top: 18px; color: var(--cyan-300); font-size: .72rem; letter-spacing: .2em; }
+.entry-organizations { display: grid; gap: 12px; margin: 24px 0; text-align: left; }
+.entry-organizations article { padding: 16px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-soft); }
+.entry-organizations article > span { margin-left: 8px; color: var(--text-secondary); font-size: .78rem; text-transform: uppercase; }
+.entry-organizations article div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.entry-organizations button { min-height: 44px; padding: 9px 14px; border: 1px solid var(--border-accent); border-radius: var(--radius-md); color: var(--text-primary); background: var(--surface-raised); cursor: pointer; }
+.entry-logout { min-height: 44px; border: 0; color: var(--text-secondary); background: transparent; cursor: pointer; }

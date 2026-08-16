@@ -21,13 +21,23 @@ async function request(url, options = {}) {
   try {
     const token = accessTokenProvider ? await accessTokenProvider() : null;
     const authorization = token ? { Authorization: `Bearer ${token}` } : {};
+    const csrf = document.cookie.split("; ").find((item) => item.startsWith("trident_csrf="))?.split("=")[1];
+    const csrfHeader = !["GET", "HEAD", "OPTIONS"].includes(options.method || "GET") && csrf
+      ? { "X-CSRF-Token": decodeURIComponent(csrf) }
+      : {};
     const response = await fetch(`${API}/v1${url}`, {
       ...options,
-      headers: { "X-Request-ID": requestId(), ...authorization, ...options.headers },
+      credentials: "include",
+      headers: { "X-Request-ID": requestId(), ...authorization, ...csrfHeader, ...options.headers },
       signal: controller.signal,
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error?.message || `Erreur ${response.status}`);
+    if (!response.ok) {
+      const error = new Error(payload.error?.message || `Erreur ${response.status}`);
+      error.status = response.status;
+      error.code = payload.error?.code;
+      throw error;
+    }
     return payload.data;
   } catch (error) {
     if (error.name === "AbortError") throw new Error("Le service TRIDENT met trop de temps à répondre.");
@@ -36,6 +46,16 @@ async function request(url, options = {}) {
     clearTimeout(timeout);
   }
 }
+
+export const getSessionConfiguration = () => request("/session/configuration");
+export const startSessionLogin = (returnTo = "/") => request("/session/login", {
+  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ return_to: returnTo }),
+});
+export const getCurrentSession = () => request("/session");
+export const selectSessionContext = (organizationId, workspaceId = null) => request("/session/context", {
+  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ organization_id: organizationId, workspace_id: workspaceId }),
+});
+export const endSession = () => request("/session/logout", { method: "POST" });
 
 export const listWorkspaces = () => request("/workspaces");
 export const createWorkspace = (payload) => request("/workspaces", {

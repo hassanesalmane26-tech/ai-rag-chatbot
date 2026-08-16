@@ -1,6 +1,6 @@
 """Public Genesis API. All product resources are nested below Workspace."""
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -70,25 +70,32 @@ def get_conversation(workspace_id: str, conversation_id: str, db: Session) -> Co
 
 @router.get("/workspaces")
 def list_workspaces(
+    request: Request,
     db: Session = Depends(get_db),
     principal: AuthenticatedPrincipal = Depends(require_principal),
 ):
-    workspaces = visible_workspaces(db, principal)
+    application_session = getattr(request.state, "application_session", None)
+    workspaces = visible_workspaces(
+        db, principal, getattr(application_session, "active_organization_id", None)
+    )
     return data([serialize_workspace(workspace) for workspace in workspaces])
 
 
 @router.post("/workspaces", status_code=201)
 def create_workspace(
     payload: WorkspaceCreateInput,
+    request: Request,
     db: Session = Depends(get_db),
     principal: AuthenticatedPrincipal = Depends(require_principal),
 ):
     name = payload.name.strip()
     if not name:
         raise HTTPException(status_code=422, detail="Le nom du Workspace est requis.")
-    organization, _membership = organization_for_workspace_creation(
-        db, principal, payload.organization_id
+    application_session = getattr(request.state, "application_session", None)
+    organization_id = payload.organization_id or getattr(
+        application_session, "active_organization_id", None
     )
+    organization, _membership = organization_for_workspace_creation(db, principal, organization_id)
     workspace = create_genesis_workspace(db, name, payload.description, organization.id)
     return data(serialize_workspace(workspace))
 

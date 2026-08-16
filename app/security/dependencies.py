@@ -12,6 +12,12 @@ from app.identity.contracts import (
     PrincipalNotProvisioned,
 )
 from app.identity.service import resolve_principal
+from app.identity.session_service import (
+    CSRF_COOKIE,
+    SESSION_COOKIE,
+    validate_csrf,
+    validate_session,
+)
 
 
 def extract_bearer_token(authorization: str | None) -> str:
@@ -28,13 +34,31 @@ async def require_principal(
 ) -> AuthenticatedPrincipal:
     if request.app.state.security_mode != "oidc":
         raise AuthenticationConfigurationError()
-    token = extract_bearer_token(request.headers.get("authorization"))
+    authorization = request.headers.get("authorization")
+    session_token = request.cookies.get(SESSION_COOKIE)
     try:
-        verified = await request.app.state.identity_verifier.verify(token)
-        return resolve_principal(db, verified)
+        if authorization:
+            token = extract_bearer_token(authorization)
+            verified = await request.app.state.identity_verifier.verify(token)
+            request.state.authentication_method = "bearer"
+            return resolve_principal(db, verified)
+        if not session_token:
+            raise AuthenticationError("AUTHENTICATION_REQUIRED")
+        session, principal = validate_session(db, session_token)
+        request.state.authentication_method = "session"
+        request.state.application_session = session
+        if request.method not in {"GET", "HEAD", "OPTIONS"}:
+            validate_csrf(
+                session,
+                request.headers.get("x-csrf-token"),
+                request.cookies.get(CSRF_COOKIE),
+            )
+        return principal
     except AuthenticationUnavailable as exc:
         raise AuthenticationConfigurationError() from exc
     except InvalidIdentityCredential as exc:
         raise AuthenticationError() from exc
     except PrincipalNotProvisioned as exc:
         raise AuthenticationError("PRINCIPAL_NOT_PROVISIONED") from exc
+    except ValueError as exc:
+        raise AuthenticationError("INVALID_SESSION") from exc

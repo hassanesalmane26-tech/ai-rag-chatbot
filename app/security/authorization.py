@@ -64,11 +64,14 @@ def require_workspace_admin(
     return context
 
 
-def visible_workspaces(db: Session, principal: AuthenticatedPrincipal) -> list[Workspace]:
-    return (
+def visible_workspaces(
+    db: Session, principal: AuthenticatedPrincipal, organization_id: str | None = None
+) -> list[Workspace]:
+    query = (
         db.query(Workspace)
         .join(Membership, Membership.organization_id == Workspace.organization_id)
         .filter(Membership.user_id == principal.user_id)
-        .order_by(Workspace.updated_at.desc())
-        .all()
     )
+    if organization_id:
+        query = query.filter(Workspace.organization_id == organization_id)
+    return query.order_by(Workspace.updated_at.desc()).all()

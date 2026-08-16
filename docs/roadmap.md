@@ -105,10 +105,15 @@ Asymmetric OIDC verification, fail-closed route protection, centralized role
 policy and cross-tenant Workspace/module isolation are implemented. Real
 provider login/session and controlled legacy ownership claim remain AI-3.
 
-### AI-3 — Session and entry experience
+### AI-3 — Session and entry experience (implemented)
 
 Add session bootstrap, Organization/Workspace entry and expiry behavior without
 displacing the Workspace as the primary application surface.
+
+Authorization Code + PKCE, cryptographically verified ID-token/nonce handling,
+opaque revocable sessions, CSRF protection and server-authorized tenant
+selection are implemented. Real provider registration, the controlled legacy
+claim, domain and TLS remain deployment-owner prerequisites.
 
 ### AI-4 — Audit, API protection and contracts
 

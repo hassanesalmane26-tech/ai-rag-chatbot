@@ -20,7 +20,9 @@ from app.core.logging import configure_logging
 from app.database.database import engine
 from app.database.schema import HEAD_REVISION
 from app.identity.contracts import IdentityVerifier, UnavailableIdentityVerifier
+from app.identity.authorization_code import AuthorizationCodeClient
 from app.identity.oidc import OIDCConfiguration, OIDCIdentityVerifier
+from app.identity.session_router import router as session_router
 from app.memory.router import router as memory_router
 from app.modules.router import router as modules_router
 
@@ -75,6 +77,7 @@ def create_app(
         lifespan=lifespan,
     )
     application.state.security_mode = runtime_settings.security_mode
+    application.state.runtime_settings = runtime_settings
     application.state.identity_verifier = identity_verifier or (
         OIDCIdentityVerifier(
             OIDCConfiguration(
@@ -88,6 +91,29 @@ def create_app(
         )
         if runtime_settings.security_mode == "oidc"
         else UnavailableIdentityVerifier()
+    )
+    application.state.authorization_code_client = (
+        AuthorizationCodeClient(
+            issuer=runtime_settings.oidc_issuer,
+            client_id=runtime_settings.oidc_client_id,
+            redirect_uri=runtime_settings.oidc_redirect_uri,
+            scopes=runtime_settings.oidc_scope_values(),
+            timeout_seconds=runtime_settings.oidc_http_timeout_seconds,
+        )
+        if runtime_settings.interactive_session_enabled else None
+    )
+    application.state.id_token_verifier = (
+        OIDCIdentityVerifier(
+            OIDCConfiguration(
+                issuer=runtime_settings.oidc_issuer,
+                audience=runtime_settings.oidc_client_id,
+                algorithms=runtime_settings.allowed_oidc_algorithms(),
+                jwks_url=runtime_settings.oidc_jwks_url,
+                clock_skew_seconds=runtime_settings.oidc_clock_skew_seconds,
+                http_timeout_seconds=runtime_settings.oidc_http_timeout_seconds,
+            )
+        )
+        if runtime_settings.interactive_session_enabled else UnavailableIdentityVerifier()
     )
 
     origins = list(runtime_settings.allowed_cors_origins())
@@ -110,6 +136,8 @@ def create_app(
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
+        if request.url.path.startswith("/v1/session"):
+            response.headers["Cache-Control"] = "no-store"
         logger.info(
             "http_request_completed",
             extra={
@@ -201,6 +229,7 @@ def create_app(
             "business_api_protected": runtime_settings.security_mode == "oidc",
         }
 
+    application.include_router(session_router)
     application.include_router(genesis_router)
     application.include_router(memory_router)
     application.include_router(modules_router)
