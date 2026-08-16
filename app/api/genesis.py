@@ -7,25 +7,34 @@ from sqlalchemy.orm import Session
 from app.conversations.service import create_conversation, reply_to_conversation, serialize_conversation, serialize_message
 from app.database.database import get_db
 from app.database.genesis_models import Conversation, Workspace, WorkspaceDocument, WorkspaceMessage
+from app.identity.contracts import AuthenticatedPrincipal
 from app.knowledge.service import (
     create_document,
     delete_document,
     retry_document,
     serialize_document,
 )
+from app.security.authorization import (
+    organization_for_workspace_creation,
+    require_workspace_access,
+    require_workspace_admin,
+    visible_workspaces,
+)
+from app.security.dependencies import require_principal
+from app.tenancy.service import TenantContext
 from app.workspaces.service import (
     create_genesis_workspace,
-    ensure_genesis_workspace,
     serialize_workspace,
     workspace_activity,
 )
 
-router = APIRouter(prefix="/v1", tags=["Genesis"])
+router = APIRouter(prefix="/v1", tags=["Genesis"], dependencies=[Depends(require_principal)])
 
 
 class WorkspaceCreateInput(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     description: str | None = Field(default=None, max_length=1000)
+    organization_id: str | None = Field(default=None, max_length=36)
 
 
 class WorkspaceUpdateInput(BaseModel):
@@ -60,28 +69,46 @@ def get_conversation(workspace_id: str, conversation_id: str, db: Session) -> Co
 
 
 @router.get("/workspaces")
-def list_workspaces(db: Session = Depends(get_db)):
-    ensure_genesis_workspace(db)
-    workspaces = db.query(Workspace).order_by(Workspace.updated_at.desc()).all()
+def list_workspaces(
+    db: Session = Depends(get_db),
+    principal: AuthenticatedPrincipal = Depends(require_principal),
+):
+    workspaces = visible_workspaces(db, principal)
     return data([serialize_workspace(workspace) for workspace in workspaces])
 
 
 @router.post("/workspaces", status_code=201)
-def create_workspace(payload: WorkspaceCreateInput, db: Session = Depends(get_db)):
+def create_workspace(
+    payload: WorkspaceCreateInput,
+    db: Session = Depends(get_db),
+    principal: AuthenticatedPrincipal = Depends(require_principal),
+):
     name = payload.name.strip()
     if not name:
         raise HTTPException(status_code=422, detail="Le nom du Workspace est requis.")
-    workspace = create_genesis_workspace(db, name, payload.description)
+    organization, _membership = organization_for_workspace_creation(
+        db, principal, payload.organization_id
+    )
+    workspace = create_genesis_workspace(db, name, payload.description, organization.id)
     return data(serialize_workspace(workspace))
 
 
 @router.get("/workspaces/{workspace_id}")
-def read_workspace(workspace_id: str, db: Session = Depends(get_db)):
+def read_workspace(
+    workspace_id: str,
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
+):
     return data(serialize_workspace(get_workspace(workspace_id, db)))
 
 
 @router.patch("/workspaces/{workspace_id}")
-def update_workspace(workspace_id: str, payload: WorkspaceUpdateInput, db: Session = Depends(get_db)):
+def update_workspace(
+    workspace_id: str,
+    payload: WorkspaceUpdateInput,
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_admin),
+):
     workspace = get_workspace(workspace_id, db)
     fields = payload.model_fields_set
     if not fields:
@@ -98,12 +125,20 @@ def update_workspace(workspace_id: str, payload: WorkspaceUpdateInput, db: Sessi
 
 
 @router.get("/workspaces/{workspace_id}/overview")
-def read_overview(workspace_id: str, db: Session = Depends(get_db)):
+def read_overview(
+    workspace_id: str,
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
+):
     return data(workspace_activity(db, get_workspace(workspace_id, db)))
 
 
 @router.get("/workspaces/{workspace_id}/conversations")
-def list_conversations(workspace_id: str, db: Session = Depends(get_db)):
+def list_conversations(
+    workspace_id: str,
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
+):
     get_workspace(workspace_id, db)
     conversations = (
         db.query(Conversation)
@@ -115,13 +150,23 @@ def list_conversations(workspace_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/workspaces/{workspace_id}/conversations", status_code=201)
-def new_conversation(workspace_id: str, payload: ConversationInput, db: Session = Depends(get_db)):
+def new_conversation(
+    workspace_id: str,
+    payload: ConversationInput,
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
+):
     get_workspace(workspace_id, db)
     return data(serialize_conversation(create_conversation(db, workspace_id, payload.title)))
 
 
 @router.get("/workspaces/{workspace_id}/conversations/{conversation_id}")
-def read_conversation(workspace_id: str, conversation_id: str, db: Session = Depends(get_db)):
+def read_conversation(
+    workspace_id: str,
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
+):
     conversation = get_conversation(workspace_id, conversation_id, db)
     messages = (
         db.query(WorkspaceMessage)
@@ -133,7 +178,13 @@ def read_conversation(workspace_id: str, conversation_id: str, db: Session = Dep
 
 
 @router.post("/workspaces/{workspace_id}/conversations/{conversation_id}/messages", status_code=201)
-def send_message(workspace_id: str, conversation_id: str, payload: MessageInput, db: Session = Depends(get_db)):
+def send_message(
+    workspace_id: str,
+    conversation_id: str,
+    payload: MessageInput,
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
+):
     conversation = get_conversation(workspace_id, conversation_id, db)
     user_message, assistant_message = reply_to_conversation(
         db, workspace_id, conversation, payload.content
@@ -145,20 +196,34 @@ def send_message(workspace_id: str, conversation_id: str, payload: MessageInput,
 
 
 @router.get("/workspaces/{workspace_id}/documents")
-def list_documents(workspace_id: str, db: Session = Depends(get_db)):
+def list_documents(
+    workspace_id: str,
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
+):
     get_workspace(workspace_id, db)
     documents = db.query(WorkspaceDocument).filter_by(workspace_id=workspace_id).order_by(WorkspaceDocument.created_at.desc()).all()
     return data([serialize_document(document) for document in documents])
 
 
 @router.post("/workspaces/{workspace_id}/documents", status_code=201)
-async def upload_document(workspace_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_document(
+    workspace_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
+):
     get_workspace(workspace_id, db)
     return data(serialize_document(await create_document(db, workspace_id, file)))
 
 
 @router.delete("/workspaces/{workspace_id}/documents/{document_id}")
-def remove_document(workspace_id: str, document_id: str, db: Session = Depends(get_db)):
+def remove_document(
+    workspace_id: str,
+    document_id: str,
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
+):
     document = db.get(WorkspaceDocument, document_id)
     if not document or document.workspace_id != workspace_id:
         raise HTTPException(status_code=404, detail="Document introuvable.")
@@ -167,7 +232,12 @@ def remove_document(workspace_id: str, document_id: str, db: Session = Depends(g
 
 
 @router.post("/workspaces/{workspace_id}/documents/{document_id}/retry")
-def retry_failed_document(workspace_id: str, document_id: str, db: Session = Depends(get_db)):
+def retry_failed_document(
+    workspace_id: str,
+    document_id: str,
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
+):
     document = db.get(WorkspaceDocument, document_id)
     if not document or document.workspace_id != workspace_id:
         raise HTTPException(status_code=404, detail="Document introuvable.")

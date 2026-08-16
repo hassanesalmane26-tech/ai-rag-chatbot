@@ -7,8 +7,15 @@ from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.database.genesis_models import Workspace, WorkspaceMemory
 from app.memory.service import MEMORY_KINDS, serialize_memory, validate_conversation_scope
+from app.security.authorization import require_workspace_access
+from app.security.dependencies import require_principal
+from app.tenancy.service import TenantContext
 
-router = APIRouter(prefix="/v1/workspaces/{workspace_id}/memories", tags=["Memory"])
+router = APIRouter(
+    prefix="/v1/workspaces/{workspace_id}/memories",
+    tags=["Memory"],
+    dependencies=[Depends(require_principal)],
+)
 
 
 class MemoryCreateInput(BaseModel):
@@ -49,7 +56,11 @@ def normalized(value: str, field: str) -> str:
 
 
 @router.get("")
-def list_memories(workspace_id: str, db: Session = Depends(get_db)):
+def list_memories(
+    workspace_id: str,
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
+):
     require_workspace(db, workspace_id)
     memories = (
         db.query(WorkspaceMemory)
@@ -62,7 +73,10 @@ def list_memories(workspace_id: str, db: Session = Depends(get_db)):
 
 @router.post("", status_code=201)
 def create_memory(
-    workspace_id: str, payload: MemoryCreateInput, db: Session = Depends(get_db)
+    workspace_id: str,
+    payload: MemoryCreateInput,
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
 ):
     require_workspace(db, workspace_id)
     if payload.kind not in MEMORY_KINDS:
@@ -90,6 +104,7 @@ def update_memory(
     memory_id: str,
     payload: MemoryUpdateInput,
     db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
 ):
     memory = require_memory(db, workspace_id, memory_id)
     fields = payload.model_fields_set
@@ -112,7 +127,10 @@ def update_memory(
 
 @router.delete("/{memory_id}")
 def delete_memory(
-    workspace_id: str, memory_id: str, db: Session = Depends(get_db)
+    workspace_id: str,
+    memory_id: str,
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
 ):
     memory = require_memory(db, workspace_id, memory_id)
     db.delete(memory)

@@ -96,10 +96,14 @@ The provider-neutral contracts, tenant persistence, bootstrap adoption and
 internal tenant resolver are implemented. Real OIDC verification and route
 enforcement remain AI-2 work.
 
-### AI-2 — Systematic Workspace authorization
+### AI-2 — Systematic Workspace authorization (implemented)
 
 Resolve `CurrentPrincipal`, membership and `AuthorizedWorkspace` before every
 tenant-owned data access or provider call. Add complete cross-tenant tests.
+
+Asymmetric OIDC verification, fail-closed route protection, centralized role
+policy and cross-tenant Workspace/module isolation are implemented. Real
+provider login/session and controlled legacy ownership claim remain AI-3.
 
 ### AI-3 — Session and entry experience
 

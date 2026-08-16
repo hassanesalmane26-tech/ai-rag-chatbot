@@ -12,6 +12,10 @@ class PrincipalNotProvisioned(LookupError):
     """Raised when a verified external identity has no internal TRIDENT User."""
 
 
+class InvalidIdentityCredential(ValueError):
+    """Raised when a credential cannot be cryptographically trusted."""
+
+
 @dataclass(frozen=True, slots=True)
 class VerifiedExternalIdentity:
     """Claims emitted only after verification by an IdentityVerifier adapter."""

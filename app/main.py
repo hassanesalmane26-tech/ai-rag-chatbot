@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
@@ -18,6 +19,8 @@ from app.core.errors import APIError
 from app.core.logging import configure_logging
 from app.database.database import engine
 from app.database.schema import HEAD_REVISION
+from app.identity.contracts import IdentityVerifier, UnavailableIdentityVerifier
+from app.identity.oidc import OIDCConfiguration, OIDCIdentityVerifier
 from app.memory.router import router as memory_router
 from app.modules.router import router as modules_router
 
@@ -30,16 +33,26 @@ def request_id_for(request: Request) -> str:
     return candidate if REQUEST_ID_PATTERN.fullmatch(candidate) else uuid.uuid4().hex
 
 
-def error_response(status_code: int, code: str, message: str, request: Request) -> JSONResponse:
+def error_response(
+    status_code: int,
+    code: str,
+    message: str,
+    request: Request,
+    headers: dict[str, str] | None = None,
+) -> JSONResponse:
     request_id = getattr(request.state, "request_id", request_id_for(request))
     return JSONResponse(
         status_code=status_code,
         content={"error": {"code": code, "message": message, "request_id": request_id}},
-        headers={"X-Request-ID": request_id},
+        headers={"X-Request-ID": request_id, **(headers or {})},
     )
 
 
-def create_app(runtime_settings: Settings = settings, database_engine: Engine = engine) -> FastAPI:
+def create_app(
+    runtime_settings: Settings = settings,
+    database_engine: Engine = engine,
+    identity_verifier: IdentityVerifier | None = None,
+) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         configure_logging(runtime_settings.log_level)
@@ -56,8 +69,37 @@ def create_app(runtime_settings: Settings = settings, database_engine: Engine = 
         version=runtime_settings.app_version,
         debug=runtime_settings.debug,
         root_path="/api",
+        docs_url=None if runtime_settings.environment in {"staging", "production"} else "/docs",
+        redoc_url=None if runtime_settings.environment in {"staging", "production"} else "/redoc",
+        openapi_url=None if runtime_settings.environment in {"staging", "production"} else "/openapi.json",
         lifespan=lifespan,
     )
+    application.state.security_mode = runtime_settings.security_mode
+    application.state.identity_verifier = identity_verifier or (
+        OIDCIdentityVerifier(
+            OIDCConfiguration(
+                issuer=runtime_settings.oidc_issuer,
+                audience=runtime_settings.oidc_audience,
+                algorithms=runtime_settings.allowed_oidc_algorithms(),
+                jwks_url=runtime_settings.oidc_jwks_url,
+                clock_skew_seconds=runtime_settings.oidc_clock_skew_seconds,
+                http_timeout_seconds=runtime_settings.oidc_http_timeout_seconds,
+            )
+        )
+        if runtime_settings.security_mode == "oidc"
+        else UnavailableIdentityVerifier()
+    )
+
+    origins = list(runtime_settings.allowed_cors_origins())
+    if origins:
+        application.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+            allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+            expose_headers=["X-Request-ID"],
+        )
 
     @application.middleware("http")
     async def correlate_request(request: Request, call_next):
@@ -65,6 +107,9 @@ def create_app(runtime_settings: Settings = settings, database_engine: Engine = 
         started = time.perf_counter()
         response = await call_next(request)
         response.headers["X-Request-ID"] = request.state.request_id
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
         logger.info(
             "http_request_completed",
             extra={
@@ -84,7 +129,8 @@ def create_app(runtime_settings: Settings = settings, database_engine: Engine = 
 
     @application.exception_handler(APIError)
     async def api_error(request: Request, exc: APIError):
-        return error_response(exc.status_code, exc.code, exc.message, request)
+        headers = {"WWW-Authenticate": "Bearer"} if exc.status_code == 401 else None
+        return error_response(exc.status_code, exc.code, exc.message, request, headers)
 
     @application.exception_handler(HTTPException)
     async def http_error(request: Request, exc: HTTPException):
@@ -94,10 +140,18 @@ def create_app(runtime_settings: Settings = settings, database_engine: Engine = 
             413: "PAYLOAD_TOO_LARGE",
             415: "UNSUPPORTED_MEDIA_TYPE",
             422: "UNPROCESSABLE_ENTITY",
+            401: "AUTHENTICATION_REQUIRED",
+            403: "ACCESS_DENIED",
             503: "DEPENDENCY_UNAVAILABLE",
         }
         message = exc.detail if isinstance(exc.detail, str) else "La requête a échoué."
-        return error_response(exc.status_code, codes.get(exc.status_code, "REQUEST_FAILED"), message, request)
+        return error_response(
+            exc.status_code,
+            codes.get(exc.status_code, "REQUEST_FAILED"),
+            message,
+            request,
+            dict(exc.headers or {}),
+        )
 
     @application.exception_handler(Exception)
     async def unhandled_error(request: Request, exc: Exception):
@@ -143,6 +197,8 @@ def create_app(runtime_settings: Settings = settings, database_engine: Engine = 
             "build_sha": runtime_settings.build_sha,
             "migration_head": HEAD_REVISION,
             "migration_revision": migration_revision,
+            "security_mode": runtime_settings.security_mode,
+            "business_api_protected": runtime_settings.security_mode == "oidc",
         }
 
     application.include_router(genesis_router)

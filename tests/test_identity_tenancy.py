@@ -17,7 +17,14 @@ from app.identity.contracts import (
 from app.identity.models import ExternalIdentity, User
 from app.identity.service import resolve_principal
 from app.tenancy.models import Membership, MembershipRole, Organization
-from app.tenancy.service import TenantAccessDenied, tenant_context_for_workspace
+from app.tenancy.service import (
+    LEGACY_ORGANIZATION_ID,
+    LegacyOrganizationClaimError,
+    TenantAccessDenied,
+    claim_legacy_organization,
+    ensure_legacy_organization,
+    tenant_context_for_workspace,
+)
 
 
 class IdentityTenancyTests(unittest.TestCase):
@@ -154,6 +161,27 @@ class IdentityTenancyTests(unittest.TestCase):
         self.db.commit()
         with self.assertRaises(TenantAccessDenied):
             tenant_context_for_workspace(self.db, principal, workspace.id)
+
+    def test_legacy_claim_requires_verified_identity_and_is_one_time(self):
+        organization = ensure_legacy_organization(self.db)
+        workspace = Workspace(name="Preserved", organization_id=organization.id)
+        self.db.add(workspace)
+        self.db.commit()
+        workspace_id = workspace.id
+
+        identity = VerifiedExternalIdentity(
+            issuer="https://issuer.example", subject="verified-owner"
+        )
+        principal = claim_legacy_organization(self.db, identity)
+        self.assertEqual(self.db.get(Workspace, workspace_id).organization_id, LEGACY_ORGANIZATION_ID)
+        claimed = self.db.get(Organization, LEGACY_ORGANIZATION_ID)
+        self.assertEqual(claimed.ownership_state, "active")
+        membership = self.db.query(Membership).filter_by(user_id=principal.user_id).one()
+        self.assertEqual(membership.role, MembershipRole.OWNER.value)
+        self.assertEqual(membership.organization_id, LEGACY_ORGANIZATION_ID)
+
+        with self.assertRaises(LegacyOrganizationClaimError):
+            claim_legacy_organization(self.db, identity)
 
 
 if __name__ == "__main__":

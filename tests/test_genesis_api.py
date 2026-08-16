@@ -12,6 +12,9 @@ from unittest.mock import MagicMock, patch
 # Must be set before importing the application settings.
 os.environ["DATABASE_URL"] = f"sqlite:///{Path(tempfile.gettempdir()) / 'trident_genesis_tests.sqlite'}"
 os.environ["OPENAI_API_KEY"] = "test-key"
+os.environ["TRIDENT_SECURITY_MODE"] = "oidc"
+os.environ["TRIDENT_OIDC_ISSUER"] = "https://issuer.test"
+os.environ["TRIDENT_OIDC_AUDIENCE"] = "trident-test"
 
 import httpx
 import uvicorn
@@ -21,12 +24,35 @@ from langchain_core.documents import Document
 from app.main import app
 from app.database.database import Base, SessionLocal, engine
 from app.database.genesis_models import Workspace, WorkspaceDocument
+from app.identity.contracts import InvalidIdentityCredential, VerifiedExternalIdentity
+from app.identity.models import ExternalIdentity, User
 from app.database.schema import HEAD_REVISION
 from app.knowledge.service import MAX_UPLOAD_BYTES, create_document, delete_document
 from app.knowledge.reconciliation import audit_workspace_knowledge
 from app.rag.search import search_workspace_documents
 from app.modules.registry import modules_for_edition
-from app.tenancy.models import Organization
+from app.tenancy.models import Membership, MembershipRole, Organization
+
+
+class ControlledIdentityVerifier:
+    """Test-only adapter; cryptographic verification has dedicated RSA/JWKS tests."""
+
+    identities = {
+        "primary-token": "primary-subject",
+        "other-token": "other-subject",
+        "member-token": "member-subject",
+        "unprovisioned-token": "unprovisioned-subject",
+    }
+
+    async def verify(self, credential):
+        subject = self.identities.get(credential)
+        if not subject:
+            raise InvalidIdentityCredential("invalid test credential")
+        return VerifiedExternalIdentity(issuer="https://issuer.test", subject=subject)
+
+
+app.state.identity_verifier = ControlledIdentityVerifier()
+app.state.security_mode = "oidc"
 
 
 class InMemoryVectorStore:
@@ -72,6 +98,8 @@ class AppClient:
         )
 
     def request(self, method, url, **kwargs):
+        headers = kwargs.setdefault("headers", {})
+        headers.setdefault("Authorization", "Bearer primary-token")
         return self.client.request(method, url, **kwargs)
 
     def get(self, url, **kwargs):
@@ -101,6 +129,33 @@ class GenesisApiTests(unittest.TestCase):
     def setUp(self):
         Base.metadata.drop_all(bind=engine)
         Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        try:
+            user = User(display_name="Primary test principal")
+            organization = Organization(
+                name="Primary Organization", slug="primary-organization", ownership_state="active"
+            )
+            db.add_all([user, organization])
+            db.flush()
+            db.add_all(
+                [
+                    ExternalIdentity(
+                        user_id=user.id,
+                        issuer="https://issuer.test",
+                        subject="primary-subject",
+                    ),
+                    Membership(
+                        user_id=user.id,
+                        organization_id=organization.id,
+                        role=MembershipRole.OWNER.value,
+                    ),
+                ]
+            )
+            db.commit()
+            self.primary_user_id = user.id
+            self.primary_organization_id = organization.id
+        finally:
+            db.close()
 
     def workspace(self, name="Workspace de test"):
         response = self.client.post("/v1/workspaces", json={"name": name})
@@ -108,6 +163,7 @@ class GenesisApiTests(unittest.TestCase):
         return response.json()["data"]
 
     def test_bootstraps_workspace_and_returns_overview(self):
+        self.workspace("Workspace initial")
         response = self.client.get("/v1/workspaces")
         self.assertEqual(response.status_code, 200, response.text)
         workspace = response.json()["data"][0]
@@ -142,7 +198,7 @@ class GenesisApiTests(unittest.TestCase):
             [module.order for module in modules_for_edition()], sorted(module.order for module in modules_for_edition())
         )
         missing = self.client.get("/v1/workspaces/not-found/modules")
-        self.assertEqual(missing.status_code, 404, missing.text)
+        self.assertEqual(missing.status_code, 403, missing.text)
 
     def test_health_and_request_correlation_contracts(self):
         live = self.client.get("/health/live", headers={"x-request-id": "request-test-123"})
@@ -157,7 +213,11 @@ class GenesisApiTests(unittest.TestCase):
         self.assertEqual(build.json()["migration_revision"], "unmanaged")
 
     def test_error_contract_generates_a_safe_request_id(self):
-        missing = self.client.get("/v1/workspaces/not-found", headers={"x-request-id": "invalid id"})
+        workspace = self.workspace()
+        missing = self.client.get(
+            f"/v1/workspaces/{workspace['id']}/conversations/not-found",
+            headers={"x-request-id": "invalid id"},
+        )
         self.assertEqual(missing.status_code, 404, missing.text)
         payload = missing.json()["error"]
         self.assertEqual(payload["code"], "RESOURCE_NOT_FOUND")
@@ -179,7 +239,7 @@ class GenesisApiTests(unittest.TestCase):
             self.assertIsNotNone(persisted.organization_id)
             self.assertNotIn("organization_id", workspace)
             organization = db.get(Organization, persisted.organization_id)
-            self.assertEqual(organization.ownership_state, "legacy_unclaimed")
+            self.assertEqual(organization.ownership_state, "active")
         finally:
             db.close()
 
@@ -203,9 +263,9 @@ class GenesisApiTests(unittest.TestCase):
         empty = self.client.patch(f"/v1/workspaces/{workspace['id']}", json={})
         self.assertEqual(empty.status_code, 422, empty.text)
         missing = self.client.get("/v1/workspaces/not-a-workspace")
-        self.assertEqual(missing.status_code, 404, missing.text)
+        self.assertEqual(missing.status_code, 403, missing.text)
         unknown_update = self.client.patch("/v1/workspaces/not-a-workspace", json={"name": "Inconnu"})
-        self.assertEqual(unknown_update.status_code, 404, unknown_update.text)
+        self.assertEqual(unknown_update.status_code, 403, unknown_update.text)
 
     def test_conversations_and_messages_are_isolated_by_workspace(self):
         first, second = self.workspace("Premier"), self.workspace("Second")
@@ -514,6 +574,107 @@ class GenesisApiTests(unittest.TestCase):
         self.assertEqual(answered.status_code, 201, answered.text)
         self.assertEqual(answered.json()["data"]["citations"][0]["document_id"], document["id"])
         provider.return_value.responses.create.assert_called_once()
+
+    def test_business_api_fails_closed_for_invalid_identity_states(self):
+        cases = (
+            ({"Authorization": ""}, "AUTHENTICATION_REQUIRED"),
+            ({"Authorization": "Basic value"}, "INVALID_AUTHORIZATION_HEADER"),
+            ({"Authorization": "Bearer invalid"}, "INVALID_TOKEN"),
+            ({"Authorization": "Bearer unprovisioned-token"}, "PRINCIPAL_NOT_PROVISIONED"),
+        )
+        for headers, code in cases:
+            response = self.client.get("/v1/workspaces", headers=headers)
+            self.assertEqual(response.status_code, 401, response.text)
+            self.assertEqual(response.json()["error"]["code"], code)
+            self.assertEqual(response.headers["www-authenticate"], "Bearer")
+
+    def test_cross_tenant_uuid_guessing_is_denied_for_every_workspace_module(self):
+        workspace = self.workspace("Tenant A")
+        conversation = self.client.post(
+            f"/v1/workspaces/{workspace['id']}/conversations", json={}
+        ).json()["data"]
+        memory = self.client.post(
+            f"/v1/workspaces/{workspace['id']}/memories",
+            json={"title": "Private", "content": "Tenant A only"},
+        ).json()["data"]
+
+        db = SessionLocal()
+        try:
+            other_user = User(display_name="Other tenant")
+            other_organization = Organization(
+                name="Other Organization", slug="other-organization", ownership_state="active"
+            )
+            db.add_all([other_user, other_organization])
+            db.flush()
+            db.add_all(
+                [
+                    ExternalIdentity(
+                        user_id=other_user.id,
+                        issuer="https://issuer.test",
+                        subject="other-subject",
+                    ),
+                    Membership(
+                        user_id=other_user.id,
+                        organization_id=other_organization.id,
+                        role=MembershipRole.OWNER.value,
+                    ),
+                ]
+            )
+            db.commit()
+        finally:
+            db.close()
+
+        headers = {"Authorization": "Bearer other-token"}
+        paths = [
+            f"/v1/workspaces/{workspace['id']}",
+            f"/v1/workspaces/{workspace['id']}/overview",
+            f"/v1/workspaces/{workspace['id']}/conversations",
+            f"/v1/workspaces/{workspace['id']}/conversations/{conversation['id']}",
+            f"/v1/workspaces/{workspace['id']}/documents",
+            f"/v1/workspaces/{workspace['id']}/memories",
+            f"/v1/workspaces/{workspace['id']}/modules",
+        ]
+        for path in paths:
+            denied = self.client.get(path, headers=headers)
+            self.assertEqual(denied.status_code, 403, f"{path}: {denied.text}")
+        denied_update = self.client.patch(
+            f"/v1/workspaces/{workspace['id']}/memories/{memory['id']}",
+            json={"active": False},
+            headers=headers,
+        )
+        self.assertEqual(denied_update.status_code, 403, denied_update.text)
+
+    def test_member_can_use_workspace_modules_but_cannot_administer_workspace(self):
+        workspace = self.workspace("Role policy")
+        db = SessionLocal()
+        try:
+            member = User(display_name="Member")
+            db.add(member)
+            db.flush()
+            db.add_all(
+                [
+                    ExternalIdentity(
+                        user_id=member.id,
+                        issuer="https://issuer.test",
+                        subject="member-subject",
+                    ),
+                    Membership(
+                        user_id=member.id,
+                        organization_id=self.primary_organization_id,
+                        role=MembershipRole.MEMBER.value,
+                    ),
+                ]
+            )
+            db.commit()
+        finally:
+            db.close()
+        headers = {"Authorization": "Bearer member-token"}
+        readable = self.client.get(f"/v1/workspaces/{workspace['id']}/modules", headers=headers)
+        self.assertEqual(readable.status_code, 200, readable.text)
+        denied = self.client.patch(
+            f"/v1/workspaces/{workspace['id']}", json={"name": "Denied"}, headers=headers
+        )
+        self.assertEqual(denied.status_code, 403, denied.text)
 
 
 class KnowledgeServiceTests(unittest.TestCase):

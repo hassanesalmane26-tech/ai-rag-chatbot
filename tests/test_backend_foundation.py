@@ -59,6 +59,46 @@ class SettingsTests(unittest.TestCase):
         configured = Settings(TRIDENT_DATABASE_URL="sqlite://", TRIDENT_OPENAI_API_KEY="secret-value", _env_file=None)
         self.assertNotIn("secret-value", repr(configured))
 
+    def test_security_configuration_is_fail_closed_and_provider_neutral(self):
+        with self.assertRaises(ValueError):
+            Settings(
+                TRIDENT_ENV="production",
+                TRIDENT_DATABASE_URL="sqlite://",
+                TRIDENT_SECURITY_MODE="disabled",
+                _env_file=None,
+            )
+        with self.assertRaises(ValueError):
+            Settings(
+                TRIDENT_DATABASE_URL="sqlite://",
+                TRIDENT_SECURITY_MODE="oidc",
+                TRIDENT_OIDC_ISSUER="http://issuer.test",
+                TRIDENT_OIDC_AUDIENCE="trident",
+                _env_file=None,
+            )
+        with self.assertRaises(ValueError):
+            Settings(
+                TRIDENT_DATABASE_URL="sqlite://",
+                TRIDENT_OIDC_ALLOWED_ALGORITHMS="HS256",
+                _env_file=None,
+            )
+        with self.assertRaises(ValueError):
+            Settings(
+                TRIDENT_DATABASE_URL="sqlite://",
+                TRIDENT_CORS_ALLOWED_ORIGINS="*",
+                _env_file=None,
+            )
+        configured = Settings(
+            TRIDENT_ENV="production",
+            TRIDENT_DATABASE_URL="postgresql://localhost/trident",
+            TRIDENT_SECURITY_MODE="oidc",
+            TRIDENT_OIDC_ISSUER="https://issuer.example",
+            TRIDENT_OIDC_AUDIENCE="trident-api",
+            TRIDENT_CORS_ALLOWED_ORIGINS="https://app.example",
+            _env_file=None,
+        )
+        self.assertEqual(configured.allowed_oidc_algorithms(), ("RS256",))
+        self.assertEqual(configured.allowed_cors_origins(), ("https://app.example",))
+
 
 class MigrationFoundationTests(unittest.TestCase):
     def alembic_config(self, database_url: str) -> Config:
@@ -118,6 +158,23 @@ class ApplicationFoundationTests(unittest.TestCase):
         self.assertEqual(internal_response.status_code, 500)
         self.assertEqual(internal_response.json()["error"]["code"], "INTERNAL_ERROR")
         self.assertNotIn("private internal detail", internal_response.text)
+
+    def test_disabled_security_mode_keeps_health_public_and_business_fail_closed(self):
+        database_engine = create_engine("sqlite://")
+        configured = Settings(
+            TRIDENT_ENV="test",
+            TRIDENT_DATABASE_URL="sqlite://",
+            TRIDENT_SECURITY_MODE="disabled",
+            _env_file=None,
+        )
+        application = create_app(configured, database_engine)
+        live, business = asyncio.run(
+            get_from_application(application, "/health/live", "/v1/workspaces")
+        )
+        self.assertEqual(live.status_code, 200)
+        self.assertEqual(live.headers["x-content-type-options"], "nosniff")
+        self.assertEqual(business.status_code, 503)
+        self.assertEqual(business.json()["error"]["code"], "AUTHENTICATION_UNAVAILABLE")
 
 class MigrationAdoptionTests(unittest.TestCase):
     def alembic_config(self, database_url: str) -> Config:

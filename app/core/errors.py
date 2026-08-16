@@ -21,3 +21,23 @@ class ConflictError(APIError):
 class BusinessRuleError(APIError):
     def __init__(self, message: str, code: str = "BUSINESS_RULE_VIOLATION"):
         APIError.__init__(self, code=code, message=message, status_code=422)
+
+
+class AuthenticationError(APIError):
+    def __init__(self, code: str = "INVALID_TOKEN", message: str = "Authentification requise."):
+        APIError.__init__(self, code=code, message=message, status_code=401)
+
+
+class AuthenticationConfigurationError(APIError):
+    def __init__(self):
+        APIError.__init__(
+            self,
+            code="AUTHENTICATION_UNAVAILABLE",
+            message="L’authentification TRIDENT n’est pas configurée.",
+            status_code=503,
+        )
+
+
+class AuthorizationError(APIError):
+    def __init__(self, message: str = "Accès refusé."):
+        APIError.__init__(self, code="ACCESS_DENIED", message=message, status_code=403)

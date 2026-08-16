@@ -1,5 +1,15 @@
 const API = import.meta.env.VITE_API_BASE_URL || "/api";
 const REQUEST_TIMEOUT_MS = 30000;
+let accessTokenProvider = null;
+
+// AI-3 owns session acquisition. AI-2 only provides the injection seam; it never
+// reads an unverified identity or stores a credential on its own.
+export function setAccessTokenProvider(provider) {
+  if (provider !== null && typeof provider !== "function") {
+    throw new TypeError("Le fournisseur de jeton doit être une fonction.");
+  }
+  accessTokenProvider = provider;
+}
 
 function requestId() {
   return globalThis.crypto?.randomUUID?.() || `web-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -9,9 +19,11 @@ async function request(url, options = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
+    const token = accessTokenProvider ? await accessTokenProvider() : null;
+    const authorization = token ? { Authorization: `Bearer ${token}` } : {};
     const response = await fetch(`${API}/v1${url}`, {
       ...options,
-      headers: { "X-Request-ID": requestId(), ...options.headers },
+      headers: { "X-Request-ID": requestId(), ...authorization, ...options.headers },
       signal: controller.signal,
     });
     const payload = await response.json().catch(() => ({}));

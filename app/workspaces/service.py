@@ -32,11 +32,13 @@ def ensure_genesis_workspace(db: Session) -> Workspace:
     return workspace
 
 
-def create_genesis_workspace(db: Session, name: str, description: str | None) -> Workspace:
+def create_genesis_workspace(
+    db: Session, name: str, description: str | None, organization_id: str | None = None
+) -> Workspace:
     workspace = Workspace(
         name=name,
         description=description,
-        organization_id=ensure_legacy_organization(db).id,
+        organization_id=organization_id or ensure_legacy_organization(db).id,
     )
     db.add(workspace)
     db.commit()

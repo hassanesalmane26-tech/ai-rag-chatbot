@@ -6,12 +6,15 @@ Genesis validates upload names/types/sizes, generates storage names, scopes
 current resources by Workspace, uses Alembic and has a recoverable ingestion
 lifecycle. These are domain-integrity controls, not a tenant security boundary.
 
-The current development/demo endpoint is HTTP and `/api/v1` is anonymous. It
-has no User, Organization, Membership, OIDC authentication or server-side
-authorization. The deployment currently proxies a Vite development server and
-uses local disk for originals and Chroma. It must not receive sensitive,
-private or multi-user data. TRIDENT AI production remains NO-GO until AI-1 and
-AI-2 close identity and authorization, and an approved domain enables TLS.
+The current development/demo endpoint is HTTP and no real OIDC issuer is
+configured. AI-1 added internal User/Organization/Membership persistence and
+AI-2 added cryptographic OIDC verification plus systematic tenant
+authorization. With the safe `disabled` default, `/api/v1` now fails closed
+instead of exposing business data anonymously. The deployment still proxies a
+Vite development server and uses local disk for originals and Chroma. It must
+not receive sensitive or private data. TRIDENT AI production remains NO-GO
+until AI-3 supplies a real issuer/session and controlled bootstrap claim, and
+an approved domain enables TLS.
 
 AI-0 restricts owner-controlled local secret/data permissions and records the
 required edge hardening. It does not add fake authentication or claim that a
@@ -19,7 +22,7 @@ Workspace UUID is an access control.
 
 ## Mandatory controls by Phase 3
 
-- OIDC authentication, server-side authorization, and workspace-scoped queries.
+- Real OIDC deployment/session (AI-2 verification and Workspace authorization are implemented).
 - Runtime secrets from a managed secret store; rotation and no secret logging.
 - TLS in transit and managed encryption at rest for database/object/vector data.
 - File size/type allowlists, generated object names, malware scanning, isolated
