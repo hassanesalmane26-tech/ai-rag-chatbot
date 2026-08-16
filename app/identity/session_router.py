@@ -9,6 +9,7 @@ from app.core.errors import AuthenticationConfigurationError, AuthenticationErro
 from app.database.database import get_db
 from app.identity.contracts import AuthenticatedPrincipal, InvalidIdentityCredential
 from app.identity.service import resolve_or_create_principal
+from app.governance.audit import append_audit_event
 from app.identity.session_service import (
     CSRF_COOKIE,
     SESSION_COOKIE,
@@ -140,6 +141,11 @@ async def oidc_callback(
         application_session, token, csrf = create_session(
             db, principal, configured.session_ttl_seconds
         )
+        append_audit_event(
+            db, action="session.created", resource_type="session",
+            resource_id=application_session.id, principal=principal,
+            request_id=request.state.request_id,
+        )
         db.commit()
     except (ValueError, InvalidIdentityCredential) as exc:
         db.rollback()
@@ -193,6 +199,13 @@ def update_context(
         )
     except ValueError as exc:
         raise AuthorizationError() from exc
+    append_audit_event(
+        db, action="session.context_selected", resource_type="session",
+        resource_id=application_session.id, principal=principal,
+        organization_id=payload.organization_id, workspace_id=payload.workspace_id,
+        request_id=request.state.request_id,
+    )
+    db.commit()
     return session_payload(request, db, principal)
 
 
@@ -200,11 +213,18 @@ def update_context(
 def logout(
     request: Request,
     db: Session = Depends(get_db),
-    _principal: AuthenticatedPrincipal = Depends(require_principal),
+    principal: AuthenticatedPrincipal = Depends(require_principal),
 ):
     application_session = getattr(request.state, "application_session", None)
     if application_session:
         application_session.revoked_at = utcnow()
+        append_audit_event(
+            db, action="session.revoked", resource_type="session",
+            resource_id=application_session.id, principal=principal,
+            organization_id=application_session.active_organization_id,
+            workspace_id=application_session.active_workspace_id,
+            request_id=request.state.request_id,
+        )
         db.commit()
     client = request.app.state.authorization_code_client
     try:

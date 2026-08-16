@@ -10,10 +10,11 @@ from app.database import genesis_models, models  # noqa: F401 - register metadat
 from app.identity import models as identity_models  # noqa: F401 - register metadata
 from app.identity import session_models as identity_session_models  # noqa: F401
 from app.tenancy import models as tenancy_models  # noqa: F401 - register metadata
+from app.governance import models as governance_models  # noqa: F401 - register metadata
 
 BASELINE_REVISION = "0001_genesis_baseline"
 GENESIS_HEAD_REVISION = "0003_workspace_memory"
-HEAD_REVISION = "0005_oidc_sessions"
+HEAD_REVISION = "0007_audit_truncate_guard"
 CURRENT_COLUMNS = {
     table.name: {column.name for column in table.columns}
     for table in Base.metadata.sorted_tables

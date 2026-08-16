@@ -137,6 +137,10 @@ class Settings(BaseSettings):
         default=True,
         validation_alias=AliasChoices("TRIDENT_SESSION_COOKIE_SECURE", "SESSION_COOKIE_SECURE"),
     )
+    rate_limit_requests_per_minute: int = Field(
+        default=300, ge=10, le=10000,
+        validation_alias=AliasChoices("TRIDENT_RATE_LIMIT_REQUESTS_PER_MINUTE", "RATE_LIMIT_REQUESTS_PER_MINUTE"),
+    )
 
     model_config = SettingsConfigDict(extra="ignore", populate_by_name=True)
 

@@ -41,3 +41,11 @@ class AuthenticationConfigurationError(APIError):
 class AuthorizationError(APIError):
     def __init__(self, message: str = "Accès refusé."):
         APIError.__init__(self, code="ACCESS_DENIED", message=message, status_code=403)
+
+
+class QuotaExceededError(APIError):
+    def __init__(self, metric: str, limit: int):
+        APIError.__init__(
+            self, code="QUOTA_EXCEEDED",
+            message=f"Le quota {metric} ({limit}) est atteint.", status_code=429,
+        )

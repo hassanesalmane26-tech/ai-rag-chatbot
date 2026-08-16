@@ -1,11 +1,15 @@
 """Workspace-scoped public Memory API."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
 from app.database.genesis_models import Workspace, WorkspaceMemory
+from app.api.contracts import PageParams, page_meta
+from app.governance.audit import append_audit_event
+from app.governance.quotas import enforce_resource_quota
+from app.identity.contracts import AuthenticatedPrincipal
 from app.memory.service import MEMORY_KINDS, serialize_memory, validate_conversation_scope
 from app.security.authorization import require_workspace_access
 from app.security.dependencies import require_principal
@@ -32,8 +36,8 @@ class MemoryUpdateInput(BaseModel):
     active: bool | None = None
 
 
-def data(value):
-    return {"data": value, "meta": {}}
+def data(value, meta: dict | None = None):
+    return {"data": value, "meta": meta or {}}
 
 
 def require_workspace(db: Session, workspace_id: str) -> None:
@@ -58,27 +62,34 @@ def normalized(value: str, field: str) -> str:
 @router.get("")
 def list_memories(
     workspace_id: str,
+    page: PageParams = Depends(),
     db: Session = Depends(get_db),
     _tenant: TenantContext = Depends(require_workspace_access),
 ):
     require_workspace(db, workspace_id)
+    query = db.query(WorkspaceMemory).filter_by(workspace_id=workspace_id)
+    total = query.count()
     memories = (
-        db.query(WorkspaceMemory)
-        .filter_by(workspace_id=workspace_id)
+        query
         .order_by(WorkspaceMemory.updated_at.desc(), WorkspaceMemory.id.desc())
+        .offset(page.offset).limit(page.limit)
         .all()
     )
-    return data([serialize_memory(memory) for memory in memories])
+    return data([serialize_memory(memory) for memory in memories], {"pagination": page_meta(page, total)})
 
 
 @router.post("", status_code=201)
 def create_memory(
     workspace_id: str,
     payload: MemoryCreateInput,
+    request: Request,
     db: Session = Depends(get_db),
-    _tenant: TenantContext = Depends(require_workspace_access),
+    tenant: TenantContext = Depends(require_workspace_access),
+    principal: AuthenticatedPrincipal = Depends(require_principal),
 ):
     require_workspace(db, workspace_id)
+    current = db.query(WorkspaceMemory).filter_by(workspace_id=workspace_id).count()
+    enforce_resource_quota(db, principal, tenant.organization_id, "memories.per_workspace", current)
     if payload.kind not in MEMORY_KINDS:
         raise HTTPException(status_code=422, detail="Type de mémoire invalide.")
     try:
@@ -95,6 +106,10 @@ def create_memory(
     db.add(memory)
     db.commit()
     db.refresh(memory)
+    append_audit_event(db, action="memory.created", resource_type="memory", resource_id=memory.id,
+                       principal=principal, organization_id=tenant.organization_id, workspace_id=workspace_id,
+                       request_id=request.state.request_id)
+    db.commit()
     return data(serialize_memory(memory))
 
 
@@ -103,8 +118,10 @@ def update_memory(
     workspace_id: str,
     memory_id: str,
     payload: MemoryUpdateInput,
+    request: Request,
     db: Session = Depends(get_db),
-    _tenant: TenantContext = Depends(require_workspace_access),
+    tenant: TenantContext = Depends(require_workspace_access),
+    principal: AuthenticatedPrincipal = Depends(require_principal),
 ):
     memory = require_memory(db, workspace_id, memory_id)
     fields = payload.model_fields_set
@@ -122,6 +139,10 @@ def update_memory(
         memory.active = bool(payload.active)
     db.commit()
     db.refresh(memory)
+    append_audit_event(db, action="memory.updated", resource_type="memory", resource_id=memory.id,
+                       principal=principal, organization_id=tenant.organization_id, workspace_id=workspace_id,
+                       request_id=request.state.request_id, metadata={"fields": sorted(fields)})
+    db.commit()
     return data(serialize_memory(memory))
 
 
@@ -129,10 +150,16 @@ def update_memory(
 def delete_memory(
     workspace_id: str,
     memory_id: str,
+    request: Request,
     db: Session = Depends(get_db),
-    _tenant: TenantContext = Depends(require_workspace_access),
+    tenant: TenantContext = Depends(require_workspace_access),
+    principal: AuthenticatedPrincipal = Depends(require_principal),
 ):
     memory = require_memory(db, workspace_id, memory_id)
     db.delete(memory)
+    db.commit()
+    append_audit_event(db, action="memory.deleted", resource_type="memory", resource_id=memory_id,
+                       principal=principal, organization_id=tenant.organization_id, workspace_id=workspace_id,
+                       request_id=request.state.request_id)
     db.commit()
     return data({"id": memory_id, "deleted": True})

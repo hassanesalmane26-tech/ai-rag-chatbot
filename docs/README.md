@@ -29,6 +29,7 @@ are updated before significant implementation changes are made.
 | [Sprint AI-1](phases/sprint-ai-1.md) | Provider-neutral Identity and staged Workspace tenancy. |
 | [Sprint AI-2](phases/sprint-ai-2.md) | Verified OIDC and systematic tenant authorization. |
 | [Sprint AI-3](phases/sprint-ai-3.md) | Authorization Code + PKCE, secure sessions and Workspace entry. |
+| [Sprint AI-4](phases/sprint-ai-4.md) | Immutable audit, API contracts, entitlements, quotas and abuse controls. |
 | [AI-0 edge hardening plan](operations/ai0-edge-hardening.md) | Production artifact, headers, TLS and supervisor transition. |
 
 ## Documentation rule

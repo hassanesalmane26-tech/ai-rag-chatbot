@@ -15,7 +15,7 @@ function requestId() {
   return globalThis.crypto?.randomUUID?.() || `web-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-async function request(url, options = {}) {
+async function requestEnvelope(url, options = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -38,13 +38,30 @@ async function request(url, options = {}) {
       error.code = payload.error?.code;
       throw error;
     }
-    return payload.data;
+    return payload;
   } catch (error) {
     if (error.name === "AbortError") throw new Error("Le service TRIDENT met trop de temps à répondre.");
     throw error;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function request(url, options = {}) {
+  return (await requestEnvelope(url, options)).data;
+}
+
+async function listAll(url) {
+  const values = [];
+  let offset = 0;
+  while (offset <= 100000) {
+    const separator = url.includes("?") ? "&" : "?";
+    const envelope = await requestEnvelope(`${url}${separator}limit=100&offset=${offset}`);
+    values.push(...(Array.isArray(envelope.data) ? envelope.data : []));
+    if (!envelope.meta?.pagination?.has_more) return values;
+    offset += 100;
+  }
+  throw new Error("La pagination TRIDENT dépasse la limite contractuelle.");
 }
 
 export const getSessionConfiguration = () => request("/session/configuration");
@@ -57,7 +74,7 @@ export const selectSessionContext = (organizationId, workspaceId = null) => requ
 });
 export const endSession = () => request("/session/logout", { method: "POST" });
 
-export const listWorkspaces = () => request("/workspaces");
+export const listWorkspaces = () => listAll("/workspaces");
 export const createWorkspace = (payload) => request("/workspaces", {
   method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
 });
@@ -66,7 +83,7 @@ export const updateWorkspace = (workspaceId, payload) => request(`/workspaces/${
   method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
 });
 export const getOverview = (workspaceId) => request(`/workspaces/${workspaceId}/overview`);
-export const listConversations = (workspaceId) => request(`/workspaces/${workspaceId}/conversations`);
+export const listConversations = (workspaceId) => listAll(`/workspaces/${workspaceId}/conversations`);
 export const createConversation = (workspaceId, title) => request(`/workspaces/${workspaceId}/conversations`, {
   method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }),
 });
@@ -74,14 +91,14 @@ export const getConversation = (workspaceId, conversationId) => request(`/worksp
 export const sendWorkspaceMessage = (workspaceId, conversationId, content) => request(`/workspaces/${workspaceId}/conversations/${conversationId}/messages`, {
   method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content }),
 });
-export const listDocuments = (workspaceId) => request(`/workspaces/${workspaceId}/documents`);
+export const listDocuments = (workspaceId) => listAll(`/workspaces/${workspaceId}/documents`);
 export const deleteDocument = (workspaceId, documentId) => request(`/workspaces/${workspaceId}/documents/${documentId}`, { method: "DELETE" });
 export const retryDocument = (workspaceId, documentId) => request(`/workspaces/${workspaceId}/documents/${documentId}/retry`, { method: "POST" });
 export async function uploadDocument(workspaceId, file) {
   const form = new FormData(); form.append("file", file);
   return request(`/workspaces/${workspaceId}/documents`, { method: "POST", body: form });
 }
-export const listMemories = (workspaceId) => request(`/workspaces/${workspaceId}/memories`);
+export const listMemories = (workspaceId) => listAll(`/workspaces/${workspaceId}/memories`);
 export const createMemory = (workspaceId, payload) => request(`/workspaces/${workspaceId}/memories`, {
   method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
 });

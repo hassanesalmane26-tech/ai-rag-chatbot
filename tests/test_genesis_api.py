@@ -31,6 +31,7 @@ from app.knowledge.service import MAX_UPLOAD_BYTES, create_document, delete_docu
 from app.knowledge.reconciliation import audit_workspace_knowledge
 from app.rag.search import search_workspace_documents
 from app.modules.registry import modules_for_edition
+from app.governance.rate_limit import FixedWindowRateLimiter
 from app.tenancy.models import Membership, MembershipRole, Organization
 
 
@@ -127,6 +128,7 @@ class GenesisApiTests(unittest.TestCase):
         cls.client.close()
 
     def setUp(self):
+        app.state.rate_limiter = FixedWindowRateLimiter(10000)
         Base.metadata.drop_all(bind=engine)
         Base.metadata.create_all(bind=engine)
         db = SessionLocal()
@@ -178,12 +180,34 @@ class GenesisApiTests(unittest.TestCase):
             ["home", "conversations", "knowledge", "memory"],
         )
 
+    def test_list_contracts_are_bounded_and_paginated(self):
+        self.workspace("First")
+        self.workspace("Second")
+        response = self.client.get("/v1/workspaces?limit=1&offset=0")
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(len(response.json()["data"]), 1)
+        self.assertEqual(response.json()["meta"]["pagination"], {
+            "limit": 1, "offset": 0, "total": 2, "has_more": True,
+        })
+        invalid = self.client.get("/v1/workspaces?limit=101")
+        self.assertEqual(invalid.status_code, 422, invalid.text)
+        audit = self.client.get(
+            f"/v1/organizations/{self.primary_organization_id}/audit-events?limit=1"
+        )
+        self.assertEqual(audit.status_code, 200, audit.text)
+        self.assertEqual(len(audit.json()["data"]), 1)
+        self.assertEqual(audit.json()["meta"]["pagination"]["total"], 2)
+        self.assertEqual(audit.json()["data"][0]["action"], "workspace.created")
+
     def test_identity_and_tenant_administration_are_not_public_in_ai1(self):
         schema = self.client.get("/openapi.json")
         self.assertEqual(schema.status_code, 200, schema.text)
         paths = schema.json()["paths"]
         self.assertFalse(any("/users" in path for path in paths))
-        self.assertFalse(any("/organizations" in path for path in paths))
+        self.assertEqual(
+            [path for path in paths if "/organizations" in path],
+            ["/v1/organizations/{organization_id}/audit-events"],
+        )
         self.assertFalse(any("/memberships" in path for path in paths))
 
     def test_module_registry_is_stable_and_workspace_scoped(self):
@@ -621,6 +645,7 @@ class GenesisApiTests(unittest.TestCase):
                 ]
             )
             db.commit()
+            other_organization_id = other_organization.id
         finally:
             db.close()
 
@@ -637,6 +662,14 @@ class GenesisApiTests(unittest.TestCase):
         for path in paths:
             denied = self.client.get(path, headers=headers)
             self.assertEqual(denied.status_code, 403, f"{path}: {denied.text}")
+        audit = self.client.get(
+            f"/v1/organizations/{self.primary_organization_id}/audit-events", headers=headers
+        )
+        self.assertEqual(audit.status_code, 403, audit.text)
+        own_audit = self.client.get(
+            f"/v1/organizations/{other_organization_id}/audit-events", headers=headers
+        )
+        self.assertEqual(own_audit.status_code, 200, own_audit.text)
         denied_update = self.client.patch(
             f"/v1/workspaces/{workspace['id']}/memories/{memory['id']}",
             json={"active": False},

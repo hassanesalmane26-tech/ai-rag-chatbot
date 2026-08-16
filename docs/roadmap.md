@@ -115,10 +115,15 @@ opaque revocable sessions, CSRF protection and server-authorized tenant
 selection are implemented. Real provider registration, the controlled legacy
 claim, domain and TLS remain deployment-owner prerequisites.
 
-### AI-4 — Audit, API protection and contracts
+### AI-4 — Audit, API protection and contracts (implemented)
 
 Add immutable audit events, pagination, quotas/rate limits, security policy and
 OpenAPI compatibility gates.
+
+Append-only hash-chained audit events, database immutability triggers, bounded
+pagination, explicit entitlements, durable quotas, stable v1 headers and an
+application abuse boundary are implemented. Distributed edge enforcement and
+automated OpenAPI breaking-change comparison remain release/operations work.
 
 ### AI-5 — Durable production Knowledge infrastructure
 

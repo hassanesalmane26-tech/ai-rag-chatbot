@@ -37,6 +37,16 @@ Workspace UUID is an access control.
 - Immutable audit events for authentication, authorization, data access,
   document operations, configuration changes, and administrative actions.
 
+AI-4 implements append-only hash-chained audit persistence, tenant-scoped audit
+reads, explicit quota entitlements and an immediate application rate boundary.
+Database triggers reject audit mutation. Distributed edge limiting, external
+audit export/retention and alerting remain required for scaled production.
+
+Founder/Lifetime Access must be issued only as an explicit entitlement to a
+cryptographically verified internal User. It never creates Membership or
+bypasses Organization/Workspace authorization, and no Founder identity is
+hardcoded or pre-created.
+
 ## AI-specific controls
 
 Treat retrieved documents and user input as untrusted. Isolate instructions from

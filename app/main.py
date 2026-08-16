@@ -23,6 +23,8 @@ from app.identity.contracts import IdentityVerifier, UnavailableIdentityVerifier
 from app.identity.authorization_code import AuthorizationCodeClient
 from app.identity.oidc import OIDCConfiguration, OIDCIdentityVerifier
 from app.identity.session_router import router as session_router
+from app.governance.rate_limit import FixedWindowRateLimiter
+from app.governance.router import router as governance_router
 from app.memory.router import router as memory_router
 from app.modules.router import router as modules_router
 
@@ -115,6 +117,9 @@ def create_app(
         )
         if runtime_settings.interactive_session_enabled else UnavailableIdentityVerifier()
     )
+    application.state.rate_limiter = FixedWindowRateLimiter(
+        runtime_settings.rate_limit_requests_per_minute
+    )
 
     origins = list(runtime_settings.allowed_cors_origins())
     if origins:
@@ -123,19 +128,36 @@ def create_app(
             allow_origins=origins,
             allow_credentials=True,
             allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-            allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
-            expose_headers=["X-Request-ID"],
+            allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-CSRF-Token"],
+            expose_headers=["X-Request-ID", "X-TRIDENT-API-Version", "X-RateLimit-Remaining", "Retry-After"],
         )
 
     @application.middleware("http")
     async def correlate_request(request: Request, call_next):
         request.state.request_id = request_id_for(request)
         started = time.perf_counter()
+        is_health = request.url.path.startswith("/health/")
+        client_key = request.client.host if request.client else "unknown"
+        allowed, remaining, retry_after = (True, runtime_settings.rate_limit_requests_per_minute, 0)
+        if not is_health:
+            allowed, remaining, retry_after = application.state.rate_limiter.allow(client_key)
+        if not allowed:
+            response = error_response(
+                429, "RATE_LIMITED", "Trop de requêtes. Réessayez plus tard.", request,
+                {"Retry-After": str(retry_after), "X-RateLimit-Remaining": "0"},
+            )
+            response.headers["X-TRIDENT-API-Version"] = "1"
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["X-Frame-Options"] = "DENY"
+            response.headers["Referrer-Policy"] = "no-referrer"
+            return response
         response = await call_next(request)
         response.headers["X-Request-ID"] = request.state.request_id
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["X-TRIDENT-API-Version"] = "1"
+        response.headers["X-RateLimit-Remaining"] = str(remaining)
         if request.url.path.startswith("/v1/session"):
             response.headers["Cache-Control"] = "no-store"
         logger.info(
@@ -171,6 +193,7 @@ def create_app(
             401: "AUTHENTICATION_REQUIRED",
             403: "ACCESS_DENIED",
             503: "DEPENDENCY_UNAVAILABLE",
+            429: "RATE_LIMITED",
         }
         message = exc.detail if isinstance(exc.detail, str) else "La requête a échoué."
         return error_response(
@@ -230,6 +253,7 @@ def create_app(
         }
 
     application.include_router(session_router)
+    application.include_router(governance_router)
     application.include_router(genesis_router)
     application.include_router(memory_router)
     application.include_router(modules_router)
