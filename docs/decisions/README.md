@@ -15,3 +15,4 @@ status, owner, and review trigger.
 - [ADR 0013 — Immutable audit, entitlements and abuse boundaries](0013-immutable-audit-entitlements-and-abuse-boundaries.md)
 - [ADR 0014 — Durable Knowledge originals and leased jobs](0014-durable-knowledge-storage-and-jobs.md)
 - [ADR 0015 — Workspace-scoped AI orchestration and trust](0015-ai-orchestration-and-trust.md)
+- [ADR 0016 — Controlled Founder entitlement bootstrap](0016-controlled-founder-bootstrap.md)

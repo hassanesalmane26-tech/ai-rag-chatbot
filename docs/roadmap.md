@@ -145,10 +145,15 @@ traceable citations, operational preflight and recovery/deployment runbooks are
 implemented. External telemetry, managed runtime services, TLS and deployment
 of a real production frontend artifact remain owner/infrastructure actions.
 
-### AI-7 — Quality, CI and release candidate
+### AI-7 — Quality, CI and pre-release candidate (implemented)
 
 Add PostgreSQL integration, browser/E2E/accessibility coverage, CI, security
 scans, immutable artifacts and complete release validation.
+
+The reproducible PostgreSQL/backend/frontend CI gate, dependency checks,
+content-addressed frontend manifest, semantic accessibility contracts and
+Founder bootstrap planning boundary are implemented. The separate Founder
+phase and TRIDENT AI Final Validation remain intentionally unexecuted.
 
 PRO governance/connectors and NOVA agents/automations remain outside this
 sequence. Only stable extension seams may be prepared.

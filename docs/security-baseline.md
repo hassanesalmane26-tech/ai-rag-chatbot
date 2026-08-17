@@ -52,6 +52,10 @@ cryptographically verified internal User. It never creates Membership or
 bypasses Organization/Workspace authorization, and no Founder identity is
 hardcoded or pre-created.
 
+AI-7 adds a read-only Founder planner that additionally requires explicit owner
+Membership. The separate bootstrap must be operator-authorized, idempotent and
+immutably audited; it has not been executed.
+
 ## AI-specific controls
 
 Treat retrieved documents and user input as untrusted. Isolate instructions from
