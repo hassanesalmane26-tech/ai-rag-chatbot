@@ -48,6 +48,15 @@ immutable release directory; keep `.env`, PostgreSQL, originals and Chroma out
 of the web root. Preserve current runtime data paths in the production
 EnvironmentFile.
 
+The Supabase OAuth Server authorization path `/oauth/consent` is a separate,
+public browser surface. Build it with the exact project origin and Supabase
+publishable key as `VITE_SUPABASE_PROJECT_URL` and
+`VITE_SUPABASE_PUBLISHABLE_KEY`; a publishable key is not a secret, but a
+secret/service-role key is forbidden. The edge CSP `connect-src` must include
+only the exact Supabase project origin. The consent page verifies the Supabase
+user with `getUser`, supports Email + Password sign-in, retrieves the server-
+authored authorization details, and exposes explicit approve/deny actions.
+
 ## 3. DNS and TLS
 
 Cloudflare currently owns the proxied `A` record for `trident-ai.org` and the

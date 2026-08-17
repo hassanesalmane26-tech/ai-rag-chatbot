@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { WorkspaceProvider } from "./context/WorkspaceContext";
 import { SessionProvider } from "./context/SessionContext";
 import useSessionContext from "./hooks/useSessionContext";
@@ -9,6 +10,8 @@ import "./App.css";
 import MainLayout from "./app/layout/MainLayout";
 import Workspace from "./features/workspace/components/Workspace";
 import WorkspaceRouter from "./features/workspace/components/WorkspaceRouter";
+
+const ConsentPage = lazy(() => import("./features/consent/ConsentPage"));
 
 
 function WorkspaceContent() {
@@ -26,6 +29,9 @@ function SessionGate() {
 }
 
 export default function App() {
+  if (window.location.pathname === "/oauth/consent") {
+    return <Suspense fallback={<main className="consent-shell" aria-live="polite">Chargement de l’autorisation…</main>}><ConsentPage /></Suspense>;
+  }
   return (
     <SessionProvider>
       <SessionGate />

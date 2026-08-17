@@ -11,11 +11,13 @@
     "test:documents": "node src/features/documents/documentState.test.js",
     "test:memory": "node src/features/memory/memoryState.test.js",
     "test:session": "node src/features/session/sessionState.test.js",
+    "test:consent": "node src/features/consent/consentState.test.js",
     "test:accessibility": "node src/accessibility.test.js",
-    "test": "npm run test:chat && npm run test:documents && npm run test:memory && npm run test:session && npm run test:accessibility",
+    "test": "npm run test:chat && npm run test:documents && npm run test:memory && npm run test:session && npm run test:consent && npm run test:accessibility",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "axios": "^1.18.1",
     "lucide-react": "^1.24.0",
     "react": "^19.2.7",
