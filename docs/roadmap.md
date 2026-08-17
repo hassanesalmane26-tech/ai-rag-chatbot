@@ -135,10 +135,15 @@ retry recovery and read-only reconciliation are implemented. Activating an S3
 adapter and a separately supervised worker requires deployment-owner endpoint,
 bucket, credentials and service configuration.
 
-### AI-6 — AI orchestration and trust
+### AI-6 — AI orchestration, trust and production resilience (implemented)
 
 Introduce provider adapters, model/prompt/retrieval policy, traceable citations,
 safeguards and evaluation fixtures.
+
+The provider-neutral orchestration boundary, bounded untrusted-context policy,
+traceable citations, operational preflight and recovery/deployment runbooks are
+implemented. External telemetry, managed runtime services, TLS and deployment
+of a real production frontend artifact remain owner/infrastructure actions.
 
 ### AI-7 — Quality, CI and release candidate
 

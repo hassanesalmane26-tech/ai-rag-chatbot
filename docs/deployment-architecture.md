@@ -28,6 +28,16 @@ documented rollback. Backups cover relational metadata and object content;
 vector indexes are recreated from approved source records. Define RPO/RTO before
 production launch and test restoration at least quarterly.
 
+`/health/live` proves process liveness. `/health/ready` additionally requires
+database connectivity, the exact Alembic head and accessible original storage.
+`/health/build` exposes non-secret build/revision identity. Run `python -m
+app.operations.preflight` against each staged release before traffic.
+
+The browser runtime must use immutable `frontend/dist`, never `vite dev`. The
+owner must point the edge at the approved artifact, configure SPA fallback and
+headers/CSP, validate Nginx configuration, then reload through the authorized
+operational process. Repository work does not autonomously alter those units.
+
 ## Observability
 
 Use correlated request IDs across API, jobs, provider calls, and audit events.

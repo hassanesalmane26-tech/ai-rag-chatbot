@@ -59,6 +59,11 @@ data, restrict tool permissions, minimize prompt data, apply output policy, log
 only privacy-safe traces, and test prompt-injection and cross-tenant retrieval
 resistance.
 
+AI-6 implements bounded prompt assembly, untrusted Knowledge/Memory delimiters,
+Workspace metadata filtering and a provider-neutral invocation adapter. It does
+not log prompt or retrieved content. External red-team evaluation, DLP/content
+classification and provider retention configuration remain required.
+
 ## Immediate operational controls before production
 
 - Serve a production frontend artifact rather than Vite's development server.

@@ -1,6 +1,7 @@
 """TRIDENT FastAPI application factory and lifecycle."""
 
 import logging
+import os
 import re
 import time
 import uuid
@@ -226,12 +227,36 @@ def create_app(
 
     @application.get("/health/ready")
     def health_ready():
+        checks = {}
         try:
             with database_engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
+                checks["database"] = "ok"
+                if inspect(database_engine).has_table("alembic_version"):
+                    revision = connection.execute(
+                        text("SELECT version_num FROM alembic_version LIMIT 1")
+                    ).scalar_one_or_none()
+                    checks["migration"] = "ok" if revision == HEAD_REVISION else "outdated"
+                else:
+                    checks["migration"] = (
+                        "unmanaged" if runtime_settings.environment in {"development", "test"}
+                        else "outdated"
+                    )
         except Exception:
             return JSONResponse(status_code=503, content={"status": "not_ready", "checks": {"database": "unavailable"}})
-        return {"status": "ready", "checks": {"database": "ok"}}
+        documents_root = runtime_settings.documents_path
+        checks["original_storage"] = (
+            "ok" if documents_root.is_dir() and os.access(documents_root, os.R_OK | os.W_OK)
+            else "unavailable"
+        )
+        ready = all(
+            value == "ok" or (key == "migration" and value == "unmanaged")
+            for key, value in checks.items()
+        )
+        return JSONResponse(
+            status_code=200 if ready else 503,
+            content={"status": "ready" if ready else "not_ready", "checks": checks},
+        )
 
     @application.get("/health/build")
     def health_build():
