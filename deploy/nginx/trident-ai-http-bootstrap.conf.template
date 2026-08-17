@@ -1,8 +1,8 @@
 # Temporary domain-validation configuration. It preserves the current demo
-# while ACME validates __DOMAIN__; replace it with the HTTPS template afterward.
+# while ACME validates both production names; replace it with the HTTPS template afterward.
 server {
     listen 80;
-    server_name __DOMAIN__;
+    server_name trident-ai.org www.trident-ai.org;
 
     location ^~ /.well-known/acme-challenge/ {
         root /var/www/letsencrypt;

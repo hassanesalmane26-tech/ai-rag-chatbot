@@ -6,14 +6,14 @@ authorization. Replace bracketed values only with owner-approved values.
 
 ## 1. Required owner inputs
 
-- `DOMAIN`: the production hostname whose DNS and certificate the owner controls.
+- Production hostname: `trident-ai.org`; canonical alias: `www.trident-ai.org`.
 - OIDC issuer URL, API audience and public client ID. The current standards
   adapter uses Authorization Code + PKCE without a client secret, so the
   registration must allow a **public client**. A provider requiring a
   confidential-client secret needs a reviewed adapter extension before launch.
 - Provider registration:
-  - redirect URI: `https://DOMAIN/api/v1/session/callback`;
-  - post-logout URI: `https://DOMAIN/`;
+  - redirect URI: `https://trident-ai.org/api/v1/session/callback`;
+  - post-logout URI: `https://trident-ai.org/`;
   - scopes: `openid profile`;
   - response/grant: Authorization Code with PKCE `S256`;
   - ID-token claims: `iss`, `aud`, `sub`, `iat`, `exp`, `nonce`;
@@ -50,9 +50,11 @@ EnvironmentFile.
 
 ## 3. DNS and TLS
 
-Create an `A` record for `DOMAIN` pointing to `93.127.139.131`. Add `AAAA` only
-if IPv6 routing is explicitly configured. Wait until public DNS resolves to the
-expected address.
+Cloudflare currently owns the proxied `A` record for `trident-ai.org` and the
+proxied `www` CNAME. The orange-cloud response must be distinguished from the
+origin: validate the Cloudflare records in the dashboard and test the origin
+locally with an explicit Host header. Add `AAAA` only if IPv6 routing is
+explicitly configured.
 
 Render `deploy/nginx/trident-ai-http-bootstrap.conf.template`, install it through
 the authorized privileged process, run `nginx -t`, then reload Nginx. With the
@@ -60,9 +62,24 @@ ACME webroot present, issue the certificate for the exact domain:
 
 ```bash
 sudo install -d -m 0755 /var/www/letsencrypt
-sudo certbot certonly --webroot -w /var/www/letsencrypt -d "$TRIDENT_DOMAIN"
+sudo certbot certonly --webroot -w /var/www/letsencrypt \
+  -d trident-ai.org -d www.trident-ai.org
 sudo certbot renew --dry-run
 ```
+
+The reviewed helper performs the backup, immutable static staging, two Nginx
+validation/reload gates, certificate issuance and origin-local HTTPS checks:
+
+```bash
+sudo scripts/install_domain_tls.sh \
+  /home/administrator/ai-rag-chatbot \
+  /var/www/trident-ai/releases/$(git rev-parse HEAD)
+```
+
+It requires Certbot to be installed first, does not alter the database or stop
+Vite, and stores configuration backups under `/etc/nginx/trident-ai-backups/`.
+After its origin checks pass, set Cloudflare SSL/TLS mode to **Full (strict)**,
+verify both public hostnames, and only then retire the Vite service.
 
 Render `deploy/nginx/trident-ai.conf.template` with the exact domain and release
 root. Validate and reload. Verify HTTPS, assets, SPA fallback, `/api/health/*`,
