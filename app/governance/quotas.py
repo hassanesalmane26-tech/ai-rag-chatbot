@@ -6,7 +6,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.errors import QuotaExceededError
-from app.governance.models import EntitlementGrant, QuotaCounter
+from app.governance.entitlements import entitlement_value
+from app.governance.models import QuotaCounter
 from app.identity.contracts import AuthenticatedPrincipal
 
 AI_DEFAULTS = {
@@ -24,23 +25,6 @@ def _lock_scope(db: Session, organization_id: str, metric: str) -> None:
             text("SELECT pg_advisory_xact_lock(hashtextextended(:scope, 0))"),
             {"scope": f"quota:{organization_id}:{metric}"},
         )
-
-
-def _active(query, now: datetime):
-    return query.filter(EntitlementGrant.revoked_at.is_(None)).filter(
-        (EntitlementGrant.expires_at.is_(None)) | (EntitlementGrant.expires_at > now)
-    )
-
-
-def entitlement_value(
-    db: Session, principal: AuthenticatedPrincipal, organization_id: str, key: str
-) -> int | None:
-    now = datetime.now(timezone.utc)
-    user_grant = _active(db.query(EntitlementGrant).filter_by(user_id=principal.user_id, key=key), now).first()
-    if user_grant:
-        return user_grant.integer_value
-    org_grant = _active(db.query(EntitlementGrant).filter_by(organization_id=organization_id, key=key), now).first()
-    return org_grant.integer_value if org_grant else None
 
 
 def quota_limit(db: Session, principal: AuthenticatedPrincipal, organization_id: str, metric: str) -> int:

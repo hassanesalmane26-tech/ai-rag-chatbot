@@ -157,3 +157,11 @@ phase and TRIDENT AI Final Validation remain intentionally unexecuted.
 
 PRO governance/connectors and NOVA agents/automations remain outside this
 sequence. Only stable extension seams may be prepared.
+
+### Founder / Creator Access — architecture implemented, claim pending
+
+The permanent `ecosystem.full_access` entitlement, Membership-aware capability
+resolver, controlled idempotent assignment/revocation, immutable audit evidence
+and canonical creator attribution are implemented. No identity or entitlement
+has been fabricated. Claiming remains blocked until the owner supplies and
+validates the real OIDC identity and explicit Organization ownership.

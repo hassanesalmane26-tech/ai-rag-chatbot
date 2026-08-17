@@ -18,6 +18,7 @@ from app.api.genesis import router as genesis_router
 from app.core.config import Settings, settings
 from app.core.errors import APIError
 from app.core.logging import configure_logging
+from app.core.product import TRIDENT_PRODUCT
 from app.database.database import engine
 from app.database.schema import HEAD_REVISION
 from app.identity.contracts import IdentityVerifier, UnavailableIdentityVerifier
@@ -275,6 +276,7 @@ def create_app(
             "migration_revision": migration_revision,
             "security_mode": runtime_settings.security_mode,
             "business_api_protected": runtime_settings.security_mode == "oidc",
+            "product": TRIDENT_PRODUCT.public_dict(),
         }
 
     application.include_router(session_router)

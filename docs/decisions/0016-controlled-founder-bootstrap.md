@@ -1,6 +1,6 @@
 # ADR 0016 — Controlled Founder entitlement bootstrap
 
-Status: Accepted as preparation; activation deferred to Founder phase
+Status: Implemented; entitlement intentionally unclaimed
 
 ## Decision
 
@@ -9,16 +9,21 @@ bypass. It is an auditable entitlement source applied to an existing internal
 User that is already linked to a cryptographically verified external identity.
 Organization/Workspace access continues to require explicit Membership.
 
-AI-7 provides only a read-only planner. It requires an exact issuer/subject
-mapping, active internal User and explicit `owner` Membership, and returns the
-candidate IDs and `ecosystem.full_access` grant key. It never creates a User,
-Membership or grant.
+The Founder service requires an exact issuer/subject mapping, matching
+`AuthenticatedPrincipal`, active internal User, explicit active Organization and
+`owner` Membership. Its planner is read-only. Assignment accepts only the
+reserved `ecosystem.full_access` key and an explicit approval reference. It is
+idempotent, permanent by default and appends an immutable audit event.
 
-The dedicated Founder phase must add a controlled, idempotent transaction that
-requires operator authorization, appends an immutable audit event and verifies
-postconditions. The real issuer, subject, creator identity and product-language
-approval must be supplied then. No personal email, UUID or identity is stored in
-source.
+No HTTP/bootstrap route exists. The CLI is dry-run only and redacts the subject.
+Activation is a host-level controlled operation after real OIDC verification.
+Revocation requires an authenticated owner of the same Organization, an approval
+reference, preserves the grant row and appends immutable evidence. A revoked
+grant is never silently reactivated; recovery requires a reviewed procedure.
 
 `ecosystem.full_access` affects quota/edition entitlements only. It never skips
 OIDC, sessions, roles, tenant boundaries or audit.
+
+Canonical creator attribution lives in `app.core.product` and is exposed as
+public product metadata. Presentation attribution has no dependency on, and no
+effect on, authorization.

@@ -52,9 +52,11 @@ cryptographically verified internal User. It never creates Membership or
 bypasses Organization/Workspace authorization, and no Founder identity is
 hardcoded or pre-created.
 
-AI-7 adds a read-only Founder planner that additionally requires explicit owner
-Membership. The separate bootstrap must be operator-authorized, idempotent and
-immutably audited; it has not been executed.
+The Founder phase implements the controlled service: verified principal mapping,
+active User, explicit Organization owner Membership, exact reserved entitlement,
+approval reference, idempotency and immutable grant/revocation events. There is
+no public route or authentication bypass. The dry-run CLI redacts the OIDC
+subject. No claim has been executed because the real identity is unavailable.
 
 ## AI-specific controls
 

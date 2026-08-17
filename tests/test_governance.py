@@ -17,7 +17,7 @@ from app.governance.quotas import consume_hourly_quota, enforce_resource_quota, 
 from app.governance.rate_limit import FixedWindowRateLimiter
 from app.identity.contracts import AuthenticatedPrincipal
 from app.identity.models import User
-from app.tenancy.models import Organization
+from app.tenancy.models import Membership, MembershipRole, Organization
 from app.core.config import Settings
 from app.main import create_app
 
@@ -33,7 +33,14 @@ class GovernanceTests(unittest.TestCase):
         self.db.add_all([self.user, self.organization])
         self.db.flush()
         self.workspace = Workspace(name="Core", organization_id=self.organization.id)
-        self.db.add(self.workspace)
+        self.db.add_all([
+            self.workspace,
+            Membership(
+                user_id=self.user.id,
+                organization_id=self.organization.id,
+                role=MembershipRole.OWNER.value,
+            ),
+        ])
         self.db.commit()
         self.principal = AuthenticatedPrincipal(self.user.id, "https://issuer.test", "subject")
 

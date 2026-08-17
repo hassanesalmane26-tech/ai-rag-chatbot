@@ -257,6 +257,7 @@ class GenesisApiTests(unittest.TestCase):
         self.assertEqual(build.status_code, 200, build.text)
         self.assertEqual(build.json()["migration_head"], HEAD_REVISION)
         self.assertIn(build.json()["migration_revision"], {"unmanaged", HEAD_REVISION})
+        self.assertEqual(build.json()["product"]["creator"], "Salmane Hassan")
 
     def test_error_contract_generates_a_safe_request_id(self):
         workspace = self.workspace()
