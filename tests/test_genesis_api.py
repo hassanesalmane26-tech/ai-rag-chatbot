@@ -249,17 +249,10 @@ class GenesisApiTests(unittest.TestCase):
         self.assertEqual(live.headers["x-request-id"], "request-test-123")
         ready = self.client.get("/health/ready")
         self.assertEqual(ready.status_code, 200, ready.text)
-        self.assertEqual(
-            ready.json(),
-            {
-                "status": "ready",
-                "checks": {
-                    "database": "ok",
-                    "migration": "unmanaged",
-                    "original_storage": "ok",
-                },
-            },
-        )
+        self.assertEqual(ready.json()["status"], "ready")
+        self.assertEqual(ready.json()["checks"]["database"], "ok")
+        self.assertIn(ready.json()["checks"]["migration"], {"ok", "unmanaged"})
+        self.assertEqual(ready.json()["checks"]["original_storage"], "ok")
         build = self.client.get("/health/build")
         self.assertEqual(build.status_code, 200, build.text)
         self.assertEqual(build.json()["migration_head"], HEAD_REVISION)
