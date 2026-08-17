@@ -45,6 +45,7 @@ HSTS on the current IP-only demo pre-emptively.
 
 ## Current access boundary
 
-Until this transition plus AI-1/AI-2 is complete, the public address is a
-non-sensitive development/demo endpoint. `/api/v1` remains anonymous by design
-and must contain no private user or customer data.
+The current public address remains a non-sensitive development/demo endpoint.
+AI-2 now makes `/api/v1` fail closed while real OIDC is absent; it is no longer
+an anonymous business API. Private user or customer data remains prohibited
+until the owner completes OIDC, TLS and the production runtime transition.

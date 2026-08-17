@@ -202,18 +202,43 @@ def _principal_from_persisted_mapping(db: Session, issuer: str, subject: str) ->
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Read-only TRIDENT Founder readiness check")
+    parser = argparse.ArgumentParser(description="Controlled TRIDENT Founder entitlement operation")
     parser.add_argument("--issuer", required=True)
     parser.add_argument("--subject", required=True)
     parser.add_argument("--organization-id", required=True)
+    parser.add_argument("--approval-reference")
+    parser.add_argument("--apply", action="store_true")
     args = parser.parse_args()
     db = SessionLocal()
     try:
         principal = _principal_from_persisted_mapping(db, args.issuer, args.subject)
-        plan = plan_founder_bootstrap(
-            db, principal=principal, organization_id=args.organization_id
-        )
-        output = asdict(plan)
+        if args.apply:
+            if not args.approval_reference:
+                parser.error("--approval-reference is required with --apply")
+            plan = plan_founder_bootstrap(
+                db, principal=principal, organization_id=args.organization_id
+            )
+            grant = assign_founder_entitlement(
+                db,
+                principal=principal,
+                organization_id=args.organization_id,
+                approval_reference=args.approval_reference,
+            )
+            output = {
+                "apply": True,
+                "user_id": principal.user_id,
+                "issuer": principal.issuer,
+                "subject": principal.subject,
+                "organization_id": args.organization_id,
+                "entitlement_key": grant.key,
+                "grant_id": grant.id,
+                "already_active": plan.already_active,
+            }
+        else:
+            plan = plan_founder_bootstrap(
+                db, principal=principal, organization_id=args.organization_id
+            )
+            output = {"apply": False, **asdict(plan)}
         output["subject"] = "[redacted]"
         print(json.dumps(output, sort_keys=True))
     finally:

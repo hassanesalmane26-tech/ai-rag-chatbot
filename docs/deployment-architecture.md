@@ -37,6 +37,8 @@ The browser runtime must use immutable `frontend/dist`, never `vite dev`. The
 owner must point the edge at the approved artifact, configure SPA fallback and
 headers/CSP, validate Nginx configuration, then reload through the authorized
 operational process. Repository work does not autonomously alter those units.
+The renderable Nginx/systemd templates and exact owner sequence are recorded in
+[`docs/operations/owner-production-closure.md`](operations/owner-production-closure.md).
 
 ## Observability
 

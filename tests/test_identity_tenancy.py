@@ -1,7 +1,7 @@
 import asyncio
 import unittest
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
@@ -16,12 +16,14 @@ from app.identity.contracts import (
 )
 from app.identity.models import ExternalIdentity, User
 from app.identity.service import resolve_or_create_principal, resolve_principal
+from app.governance.models import AuditEvent
 from app.tenancy.models import Membership, MembershipRole, Organization
 from app.tenancy.service import (
     LEGACY_ORGANIZATION_ID,
     LegacyOrganizationClaimError,
     TenantAccessDenied,
     claim_legacy_organization,
+    claim_persisted_legacy_organization,
     ensure_legacy_organization,
     tenant_context_for_workspace,
 )
@@ -194,6 +196,51 @@ class IdentityTenancyTests(unittest.TestCase):
 
         with self.assertRaises(LegacyOrganizationClaimError):
             claim_legacy_organization(self.db, identity)
+
+    def test_host_claim_requires_persisted_active_identity_and_is_audited(self):
+        organization = ensure_legacy_organization(self.db)
+        workspace = Workspace(name="Preserved", organization_id=organization.id)
+        user = User()
+        self.db.add_all([workspace, user])
+        self.db.flush()
+        mapping = ExternalIdentity(
+            user_id=user.id,
+            issuer="https://issuer.example",
+            subject="persisted-owner",
+        )
+        self.db.add(mapping)
+        self.db.commit()
+        principal = AuthenticatedPrincipal(user.id, mapping.issuer, mapping.subject)
+
+        membership = claim_persisted_legacy_organization(
+            self.db,
+            principal=principal,
+            approval_reference="OWNER-CLOSURE-001",
+        )
+        self.assertEqual(membership.role, MembershipRole.OWNER.value)
+        self.assertEqual(self.db.get(Workspace, workspace.id).id, workspace.id)
+        self.assertEqual(
+            self.db.get(Organization, LEGACY_ORGANIZATION_ID).ownership_state,
+            "active",
+        )
+        event = self.db.execute(select(AuditEvent)).scalar_one()
+        self.assertEqual(event.action, "organization.legacy_claimed")
+
+        same = claim_persisted_legacy_organization(
+            self.db,
+            principal=principal,
+            approval_reference="OWNER-CLOSURE-001",
+        )
+        self.assertEqual(same.id, membership.id)
+        self.assertEqual(self.db.execute(select(AuditEvent)).scalars().all(), [event])
+
+        conflicting = AuthenticatedPrincipal("different", mapping.issuer, mapping.subject)
+        with self.assertRaises(LegacyOrganizationClaimError):
+            claim_persisted_legacy_organization(
+                self.db,
+                principal=conflicting,
+                approval_reference="OWNER-CLOSURE-002",
+            )
 
 
 if __name__ == "__main__":

@@ -15,8 +15,10 @@ The Founder service requires an exact issuer/subject mapping, matching
 reserved `ecosystem.full_access` key and an explicit approval reference. It is
 idempotent, permanent by default and appends an immutable audit event.
 
-No HTTP/bootstrap route exists. The CLI is dry-run only and redacts the subject.
-Activation is a host-level controlled operation after real OIDC verification.
+No HTTP/bootstrap route exists. The CLI is dry-run by default and redacts the
+subject. Its explicit `--apply` mode requires an approval reference and
+delegates to the same guarded, idempotent service after real OIDC mapping and
+owner Membership exist.
 Revocation requires an authenticated owner of the same Organization, an approval
 reference, preserves the grant row and appends immutable evidence. A revoked
 grant is never silently reactivated; recovery requires a reviewed procedure.

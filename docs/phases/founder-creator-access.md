@@ -34,11 +34,13 @@ venv/bin/python -m app.governance.founder \
   --organization-id 'EXISTING_ORGANIZATION_UUID'
 ```
 
-The command never assigns a grant and redacts the subject in output. Activation
-must call `assign_founder_entitlement` from an owner-controlled maintenance task
-using the verified `AuthenticatedPrincipal`, exact Organization UUID and a
-durable approval reference. Validate the resulting grant and
-`founder.entitlement_granted` audit event before ending maintenance.
+The command is a dry-run by default and redacts the subject. After the verified
+identity has an explicit owner Membership, the host operator may add `--apply`
+and `--approval-reference 'OWNER-APPROVED-REFERENCE'`. This invokes the same
+controlled service, never an HTTP bypass. Validate the resulting grant and
+`founder.entitlement_granted` audit event before ending maintenance. The exact
+sequence is maintained in
+[`docs/operations/owner-production-closure.md`](../operations/owner-production-closure.md).
 
 ## Idempotency and conflicts
 

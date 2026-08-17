@@ -42,3 +42,10 @@ no authenticated user is assigned automatically.
 - No profile claim, email address, browser UUID, or provider role grants access.
 - Provider login/session acquisition remains AI-3.
 - Immutable audit events, quotas and edge rate limiting remain AI-4.
+
+For production closure, the host-only `app.tenancy.bootstrap` command reuses
+only an already persisted, unambiguous OIDC mapping and active internal User. It
+is dry-run by default; `--apply` additionally requires an approval reference,
+creates only the owner Membership, activates the fixed legacy Organization and
+records `organization.legacy_claimed`. It never creates an identity from CLI
+strings and is not exposed through HTTP.
