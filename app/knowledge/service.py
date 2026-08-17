@@ -1,7 +1,5 @@
 import hashlib
-import os
 import re
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -11,6 +9,9 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.database.genesis_models import WorkspaceDocument, new_id
+from app.database.genesis_models import Workspace
+from app.knowledge.jobs import claim_job, enqueue_ingestion, fail_job, finish_job
+from app.knowledge.storage import LocalObjectStorage
 from app.rag.loader import load_document
 from app.rag.splitter import split_documents
 from app.rag.vectorstore import vectorstore
@@ -19,6 +20,10 @@ DOCUMENTS_ROOT = settings.documents_path
 ALLOWED_SUFFIXES = {".pdf", ".txt", ".docx"}
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 RETRYABLE_STATUSES = {"pending", "processing", "failed"}
+
+
+def _storage() -> LocalObjectStorage:
+    return LocalObjectStorage(DOCUMENTS_ROOT)
 
 
 def _safe_display_name(filename: str | None) -> str:
@@ -30,22 +35,7 @@ def _safe_display_name(filename: str | None) -> str:
 
 
 def _document_path(document: WorkspaceDocument) -> Path:
-    return DOCUMENTS_ROOT / document.workspace_id / document.storage_name
-
-
-def _write_original_atomically(destination: Path, content: bytes) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary_path = None
-    try:
-        with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as temporary:
-            temporary_path = Path(temporary.name)
-            temporary.write(content)
-            temporary.flush()
-            os.fsync(temporary.fileno())
-        os.replace(temporary_path, destination)
-    finally:
-        if temporary_path:
-            temporary_path.unlink(missing_ok=True)
+    return _storage().path(document.storage_key or f"{document.workspace_id}/{document.storage_name}")
 
 
 def _chunk_ids(document: WorkspaceDocument, chunks: list) -> list[str]:
@@ -67,13 +57,14 @@ def _original_matches(document: WorkspaceDocument) -> bool:
 
 def ingest_document(db: Session, document: WorkspaceDocument) -> WorkspaceDocument:
     """Index one durable original; safe to retry after any partial failure."""
-    destination = _document_path(document)
+    storage_key = document.storage_key or f"{document.workspace_id}/{document.storage_name}"
     document.status = "processing"
     document.ingestion_attempts = (document.ingestion_attempts or 0) + 1
     document.error_message = None
     db.commit()
     try:
-        chunks = split_documents(load_document(str(destination)))
+        with _storage().materialize(storage_key) as destination:
+            chunks = split_documents(load_document(str(destination)))
         for position, chunk in enumerate(chunks):
             chunk.metadata.update(
                 {
@@ -104,6 +95,33 @@ def ingest_document(db: Session, document: WorkspaceDocument) -> WorkspaceDocume
         raise HTTPException(status_code=503, detail="Le document n’a pas pu être indexé.") from exc
 
 
+def _process_ingestion_job(
+    db: Session, document: WorkspaceDocument, *, manual_retry: bool = False
+) -> WorkspaceDocument:
+    workspace = db.get(Workspace, document.workspace_id)
+    if not workspace or not workspace.organization_id:
+        raise HTTPException(status_code=409, detail="Le Workspace du document est incohérent.")
+    job = enqueue_ingestion(
+        db, workspace.organization_id, document.workspace_id, document.id, document.version
+    )
+    if manual_retry and job.status in {"queued", "failed"}:
+        job.status = "queued"
+        job.available_at = datetime.now(timezone.utc)
+    db.commit()
+    claimed = claim_job(db, job.id, "inline-api")
+    if claimed is None:
+        if job.status == "succeeded" and document.status == "indexed":
+            return document
+        raise HTTPException(status_code=409, detail="L’ingestion du document est déjà en cours.")
+    try:
+        result = ingest_document(db, document)
+        finish_job(db, claimed)
+        return result
+    except HTTPException:
+        fail_job(db, claimed, "Document ingestion failed")
+        raise
+
+
 async def create_document(db: Session, workspace_id: str, upload: UploadFile) -> WorkspaceDocument:
     display_name = _safe_display_name(upload.filename)
     content = await upload.read(MAX_UPLOAD_BYTES + 1)
@@ -121,13 +139,20 @@ async def create_document(db: Session, workspace_id: str, upload: UploadFile) ->
     if existing:
         if existing.status == "indexed":
             return existing
-        _write_original_atomically(_document_path(existing), content)
-        return ingest_document(db, existing)
+        stored = _storage().put(
+            existing.storage_key or f"{existing.workspace_id}/{existing.storage_name}", content
+        )
+        existing.original_etag = stored.etag
+        db.commit()
+        return _process_ingestion_job(db, existing)
 
+    storage_name = f"{new_id()}{Path(display_name).suffix.lower()}"
     document = WorkspaceDocument(
         workspace_id=workspace_id,
         display_name=display_name,
-        storage_name=f"{new_id()}{Path(display_name).suffix.lower()}",
+        storage_name=storage_name,
+        storage_backend="local",
+        storage_key=f"{workspace_id}/{storage_name}",
         media_type=upload.content_type or "application/octet-stream",
         size_bytes=len(content),
         content_hash=content_hash,
@@ -145,19 +170,24 @@ async def create_document(db: Session, workspace_id: str, upload: UploadFile) ->
         )
         if existing.status == "indexed":
             return existing
-        _write_original_atomically(_document_path(existing), content)
-        return ingest_document(db, existing)
+        stored = _storage().put(
+            existing.storage_key or f"{existing.workspace_id}/{existing.storage_name}", content
+        )
+        existing.original_etag = stored.etag
+        db.commit()
+        return _process_ingestion_job(db, existing)
     db.refresh(document)
 
-    destination = _document_path(document)
     try:
-        _write_original_atomically(destination, content)
+        stored = _storage().put(document.storage_key, content)
+        document.original_etag = stored.etag
+        db.commit()
     except Exception as exc:
         document.status = "failed"
         document.error_message = "Stockage de l’original impossible."
         db.commit()
         raise HTTPException(status_code=503, detail="Le document n’a pas pu être stocké.") from exc
-    return ingest_document(db, document)
+    return _process_ingestion_job(db, document)
 
 
 def retry_document(db: Session, document: WorkspaceDocument) -> WorkspaceDocument:
@@ -168,7 +198,7 @@ def retry_document(db: Session, document: WorkspaceDocument) -> WorkspaceDocumen
         document.error_message = "Original introuvable ou incohérent."
         db.commit()
         raise HTTPException(status_code=409, detail="L’original du document est introuvable ou incohérent.")
-    return ingest_document(db, document)
+    return _process_ingestion_job(db, document, manual_retry=True)
 
 
 def delete_document(db: Session, document: WorkspaceDocument) -> None:
@@ -177,7 +207,7 @@ def delete_document(db: Session, document: WorkspaceDocument) -> None:
     db.commit()
     try:
         vectorstore.delete(where={"document_id": document.id})
-        _document_path(document).unlink(missing_ok=True)
+        _storage().delete(document.storage_key or f"{document.workspace_id}/{document.storage_name}")
         db.delete(document)
         db.commit()
     except Exception as exc:
@@ -197,6 +227,7 @@ def serialize_document(document: WorkspaceDocument) -> dict:
         "display_name": document.display_name,
         "media_type": document.media_type,
         "size_bytes": document.size_bytes,
+        "storage_backend": document.storage_backend,
         "version": document.version,
         "status": document.status,
         "ingestion_attempts": document.ingestion_attempts,

@@ -42,6 +42,11 @@ reads, explicit quota entitlements and an immediate application rate boundary.
 Database triggers reject audit mutation. Distributed edge limiting, external
 audit export/retention and alerting remain required for scaled production.
 
+AI-5 confines local object keys, writes originals atomically and records leased,
+idempotent Knowledge work in PostgreSQL. A production S3-compatible adapter,
+malware scanning and worker service identity remain mandatory before accepting
+sensitive uploads at scale.
+
 Founder/Lifetime Access must be issued only as an explicit entitlement to a
 cryptographically verified internal User. It never creates Membership or
 bypasses Organization/Workspace authorization, and no Founder identity is

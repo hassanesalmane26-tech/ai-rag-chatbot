@@ -125,10 +125,15 @@ pagination, explicit entitlements, durable quotas, stable v1 headers and an
 application abuse boundary are implemented. Distributed edge enforcement and
 automated OpenAPI breaking-change comparison remain release/operations work.
 
-### AI-5 — Durable production Knowledge infrastructure
+### AI-5 — Durable production Knowledge infrastructure (implemented)
 
 Replace local originals and request-bound ingestion with object storage,
 versioned metadata and durable idempotent jobs behind existing boundaries.
+
+Provider-neutral object storage, atomic local originals, durable leased jobs,
+retry recovery and read-only reconciliation are implemented. Activating an S3
+adapter and a separately supervised worker requires deployment-owner endpoint,
+bucket, credentials and service configuration.
 
 ### AI-6 — AI orchestration and trust
 

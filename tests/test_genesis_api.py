@@ -10,7 +10,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 # Must be set before importing the application settings.
-os.environ["DATABASE_URL"] = f"sqlite:///{Path(tempfile.gettempdir()) / 'trident_genesis_tests.sqlite'}"
+TEST_DATABASE_PATH = Path(tempfile.gettempdir()) / f"trident_genesis_tests_{os.getpid()}.sqlite"
+os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DATABASE_PATH}"
 os.environ["OPENAI_API_KEY"] = "test-key"
 os.environ["TRIDENT_SECURITY_MODE"] = "oidc"
 os.environ["TRIDENT_OIDC_ISSUER"] = "https://issuer.test"
@@ -20,9 +21,11 @@ import httpx
 import uvicorn
 from fastapi import UploadFile
 from langchain_core.documents import Document
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from app.main import app
-from app.database.database import Base, SessionLocal, engine
+from app.database.database import Base, get_db
 from app.database.genesis_models import Workspace, WorkspaceDocument
 from app.identity.contracts import InvalidIdentityCredential, VerifiedExternalIdentity
 from app.identity.models import ExternalIdentity, User
@@ -33,6 +36,20 @@ from app.rag.search import search_workspace_documents
 from app.modules.registry import modules_for_edition
 from app.governance.rate_limit import FixedWindowRateLimiter
 from app.tenancy.models import Membership, MembershipRole, Organization
+
+engine = create_engine(os.environ["DATABASE_URL"], connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def isolated_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+app.dependency_overrides[get_db] = isolated_db
 
 
 class ControlledIdentityVerifier:
@@ -126,6 +143,8 @@ class GenesisApiTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.client.close()
+        engine.dispose()
+        TEST_DATABASE_PATH.unlink(missing_ok=True)
 
     def setUp(self):
         app.state.rate_limiter = FixedWindowRateLimiter(10000)
@@ -715,7 +734,10 @@ class KnowledgeServiceTests(unittest.TestCase):
         Base.metadata.drop_all(bind=engine)
         Base.metadata.create_all(bind=engine)
         self.db = SessionLocal()
-        self.workspace = Workspace(name="Knowledge test")
+        organization = Organization(name="Knowledge test", slug="knowledge-test")
+        self.db.add(organization)
+        self.db.flush()
+        self.workspace = Workspace(name="Knowledge test", organization_id=organization.id)
         self.db.add(self.workspace)
         self.db.commit()
         self.db.refresh(self.workspace)

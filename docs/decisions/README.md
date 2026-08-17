@@ -13,3 +13,4 @@ status, owner, and review trigger.
 - [ADR 0011 — Verified OIDC and centralized tenant authorization](0011-verified-oidc-and-central-tenant-authorization.md)
 - [ADR 0012 — Authorization Code + PKCE and opaque application sessions](0012-authorization-code-pkce-and-opaque-sessions.md)
 - [ADR 0013 — Immutable audit, entitlements and abuse boundaries](0013-immutable-audit-entitlements-and-abuse-boundaries.md)
+- [ADR 0014 — Durable Knowledge originals and leased jobs](0014-durable-knowledge-storage-and-jobs.md)

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.database.genesis_models import WorkspaceDocument
+from app.knowledge.storage import LocalObjectStorage
 from app.rag.vectorstore import vectorstore
 
 
@@ -48,13 +49,14 @@ def audit_workspace_knowledge(
     """Report drift without modifying PostgreSQL, originals, or vector data."""
     selected_store = store or vectorstore
     root = documents_root or settings.documents_path
+    storage = LocalObjectStorage(root)
     documents = db.query(WorkspaceDocument).filter_by(workspace_id=workspace_id).all()
     document_ids = {document.id for document in documents}
     issues: list[ReconciliationIssue] = []
     stored_originals = 0
 
     for document in documents:
-        original = root / workspace_id / document.storage_name
+        original = storage.path(document.storage_key or f"{workspace_id}/{document.storage_name}")
         if not original.is_file():
             issues.append(ReconciliationIssue("missing_original", document.id))
             continue

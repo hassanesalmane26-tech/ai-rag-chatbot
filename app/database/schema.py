@@ -11,10 +11,11 @@ from app.identity import models as identity_models  # noqa: F401 - register meta
 from app.identity import session_models as identity_session_models  # noqa: F401
 from app.tenancy import models as tenancy_models  # noqa: F401 - register metadata
 from app.governance import models as governance_models  # noqa: F401 - register metadata
+from app.knowledge import models as knowledge_models  # noqa: F401 - register metadata
 
 BASELINE_REVISION = "0001_genesis_baseline"
 GENESIS_HEAD_REVISION = "0003_workspace_memory"
-HEAD_REVISION = "0007_audit_truncate_guard"
+HEAD_REVISION = "0009_audit_guard_reconciliation"
 CURRENT_COLUMNS = {
     table.name: {column.name for column in table.columns}
     for table in Base.metadata.sorted_tables
@@ -28,7 +29,9 @@ GENESIS_TABLE_NAMES = {
     "workspace_memories",
 }
 GENESIS_HEAD_COLUMNS = {
-    name: columns - ({"organization_id"} if name == "workspaces" else set())
+    name: columns
+    - ({"organization_id"} if name == "workspaces" else set())
+    - ({"storage_backend", "storage_key", "original_etag"} if name == "workspace_documents" else set())
     for name, columns in CURRENT_COLUMNS.items()
     if name in GENESIS_TABLE_NAMES
 }
