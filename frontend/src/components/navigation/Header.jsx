@@ -11,7 +11,7 @@ import IconButton from "../ui/IconButton";
 import useSessionContext from "../../hooks/useSessionContext";
 
 export default function Header({
-  title = "TRIDENT",
+  title = "TRIDENT AI",
   onOpenWorkspaces,
 }) {
   const { logout } = useSessionContext();
@@ -22,7 +22,7 @@ export default function Header({
 
         <div>
           <h1>{title}</h1>
-          <p>INTELLIGENT WORKSPACE CORE</p>
+          <p>AI OPERATING SYSTEM · WORKSPACE</p>
         </div>
 
         <IconButton className="topbar-workspace-action" aria-label="Ouvrir les Workspaces" title="Workspaces" onClick={onOpenWorkspaces}>

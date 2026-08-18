@@ -7,7 +7,17 @@ import {
   reconcileFailedConversation,
   reconcileSuccessfulMessages,
   rollbackPendingMessage,
+  uniqueDocumentCitations,
 } from "./chatConversationState.js";
+
+test("shows each cited document once while preserving distinct sources", () => {
+  const result = uniqueDocumentCitations([
+    { document_id: "doc-1", document_name: "guide.pdf", excerpt: "first" },
+    { document_id: "doc-1", document_name: "guide.pdf", excerpt: "second" },
+    { document_id: "doc-2", document_name: "notes.txt", excerpt: "third" },
+  ]);
+  assert.deepEqual(result.map((citation) => citation.document_id), ["doc-1", "doc-2"]);
+});
 
 test("adds an optimistic user message without changing persisted history", () => {
   const existing = [{ id: "old", role: "assistant", content: "Bonjour" }];

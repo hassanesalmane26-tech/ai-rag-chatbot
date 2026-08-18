@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MessageSquarePlus, Send } from "lucide-react";
 import useWorkspaceConversations from "./useWorkspaceConversations";
+import { uniqueDocumentCitations } from "./chatConversationState";
 
 export default function ConversationsView({ workspaceId }) {
   const [text, setText] = useState("");
@@ -21,7 +22,7 @@ export default function ConversationsView({ workspaceId }) {
     <section className="conversation-panel">
       {activeConversation ? <>
         <header><span>CONVERSATION ACTIVE</span><h2>{activeConversation.title}</h2></header>
-        <div className="message-list">{activeConversation.messages.length === 0 && <p className="empty-state">Posez votre première question à Nova.</p>}{activeConversation.messages.map((message) => <article key={message.id} className={`workspace-message ${message.role}`}><span>{message.role === "user" ? "Vous" : "NOVA"}</span><p>{message.content}</p>{message.citations?.length > 0 && <div className="citations">{message.citations.map((citation, index) => <small key={`${citation.document_id}-${index}`}>Source · {citation.document_name}</small>)}</div>}</article>)}{isSending && <article className="workspace-message assistant"><span>NOVA</span><p>Analyse du Workspace…</p></article>}</div>
+        <div className="message-list">{activeConversation.messages.length === 0 && <p className="empty-state">Posez votre première question à Nova.</p>}{activeConversation.messages.map((message) => { const citations = uniqueDocumentCitations(message.citations); return <article key={message.id} className={`workspace-message ${message.role}`}><span>{message.role === "user" ? "VOUS" : "NOVA · WORKSPACE AI"}</span><p>{message.content}</p>{citations.length > 0 && <div className="citations" aria-label="Sources utilisées">{citations.map((citation) => <small key={citation.document_id || `${citation.document_name}:${citation.excerpt || ""}`}>Source · {citation.document_name}</small>)}</div>}</article>; })}{isSending && <article className="workspace-message assistant"><span>NOVA · WORKSPACE AI</span><p>Analyse du Workspace…</p></article>}</div>
         {error && <p className="inline-error" role="alert">{error}</p>}
         <form className="message-composer" onSubmit={submit}><input aria-label="Message à Nova" value={text} onChange={(event) => setText(event.target.value)} placeholder="Interrogez ce Workspace…" disabled={isSending} /><button type="submit" aria-label="Envoyer le message" disabled={isSending || !text.trim()}><Send size={18} /></button></form>
       </> : <div className="empty-state"><h2>Vos conversations</h2><p>Créez une conversation pour commencer à travailler avec ce Workspace.</p>{error && <p className="inline-error" role="alert">{error}</p>}<button type="button" onClick={addConversation}>Nouvelle conversation</button></div>}

@@ -11,7 +11,7 @@ export default function EntryExperience() {
     <VisualEnvironment />
     <section className="entry-panel ds-glass-panel ds-glass-panel--elevated">
       <TridentMark label="TRIDENT AI" />
-      <span className="entry-kicker">INTELLIGENT WORKSPACE</span>
+      <span className="entry-kicker">TRIDENT AI · WORKSPACE OPERATING SYSTEM</span>
       {state === "loading" && <><h1>Ouverture de TRIDENT</h1><p>Validation sécurisée de votre session…</p></>}
       {state === "unavailable" && <><h1>Accès sécurisé non configuré</h1><p>TRIDENT protège les données du Workspace. Un fournisseur OIDC réel doit être configuré avant la connexion.</p></>}
       {state === "anonymous" && <><h1>Entrez dans votre Workspace</h1><p>Authentification sécurisée par Authorization Code et PKCE.</p><button className="ds-button" type="button" onClick={() => login().catch(() => {})}>Se connecter</button></>}
