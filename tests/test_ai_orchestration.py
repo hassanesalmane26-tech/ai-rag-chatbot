@@ -33,3 +33,21 @@ class OrchestrationTrustTests(unittest.TestCase):
             provider=CapturingProvider(), model="test", workspace_id="w", history=[], sources=[], memory=""
         )
         self.assertEqual(result.citations, ())
+
+    def test_multiple_chunks_from_one_document_produce_one_citation(self):
+        provider = CapturingProvider()
+        result = orchestrate_workspace_turn(
+            provider=provider, model="test", workspace_id="w", history=[], memory="",
+            sources=[
+                GroundingSource("doc-1", "guide.pdf", "first", "first chunk"),
+                GroundingSource("doc-1", "guide.pdf", "second", "second chunk"),
+                GroundingSource("doc-2", "notes.txt", "third", "third chunk"),
+            ],
+        )
+        self.assertEqual(
+            [citation["document_id"] for citation in result.citations],
+            ["doc-1", "doc-2"],
+        )
+        system = provider.request.messages[0]["content"]
+        self.assertIn("first chunk", system)
+        self.assertIn("second chunk", system)

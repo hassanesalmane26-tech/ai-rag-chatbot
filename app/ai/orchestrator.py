@@ -44,12 +44,18 @@ def orchestrate_workspace_turn(
         f"<MEMORY>\n{bounded_memory or 'Aucune mémoire explicite.'}\n</MEMORY>"
     )
     result = provider.complete(ModelRequest(model=model, messages=tuple([{"role": "system", "content": system}, *history])))
-    citations = tuple(
-        {
-            "document_id": source.document_id,
-            "document_name": source.document_name,
-            "excerpt": source.excerpt,
-        }
-        for source in sources
-    )
+    # Retrieval deliberately keeps multiple chunks from the same document in
+    # the model context. The public provenance list, however, represents
+    # documents rather than chunks and must remain stable and readable.
+    citations_by_document: dict[str, dict] = {}
+    for source in sources:
+        citations_by_document.setdefault(
+            source.document_id,
+            {
+                "document_id": source.document_id,
+                "document_name": source.document_name,
+                "excerpt": source.excerpt,
+            },
+        )
+    citations = tuple(citations_by_document.values())
     return OrchestrationResult(result.text, citations, result.provider_request_id)
