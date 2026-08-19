@@ -5,6 +5,7 @@ are updated before significant implementation changes are made.
 
 | Document | Purpose |
 | --- | --- |
+| [Product Vision](product-vision.md) | Official long-term product destination, competitive ambition, editions, economics, Founder ownership and ecosystem principles. |
 | [Architecture](architecture/target-architecture.md) | Current baseline, target architecture, and system boundaries. |
 | [GENESIS blueprint](architecture/trident-genesis-blueprint.md) | Implemented Workspace-centric GENESIS product reference. |
 | [Decision records](decisions/README.md) | Immutable reasoning for material technical choices. |

@@ -165,3 +165,56 @@ resolver, controlled idempotent assignment/revocation, immutable audit evidence
 and canonical creator attribution are implemented. No identity or entitlement
 has been fabricated. Claiming remains blocked until the owner supplies and
 validates the real OIDC identity and explicit Organization ownership.
+
+## Long-term product evolution
+
+The implemented TRIDENT AI foundation is not the final product boundary.
+
+TRIDENT evolves through three product editions:
+
+**TRIDENT AI → TRIDENT PRO → NOVA TRIDENT**
+
+These editions must evolve from one shared modular platform rather than through
+separate rewrites or duplicated architectures.
+
+### Strategic capability roadmap
+
+Future delivery is expected to progressively cover:
+
+- persistent intelligent Workspaces as the primary interaction environment;
+- high-quality multimodal conversation and reasoning;
+- durable Knowledge and contextual Memory;
+- provider-neutral multi-model orchestration and intelligent routing;
+- web research and source-grounded answers;
+- tools, connectors and external service integrations;
+- agentic workflows capable of planning and executing bounded tasks;
+- coding, document, data and creation capabilities;
+- voice and multimodal interaction;
+- reusable skills, automations and workflow composition;
+- collaboration and Workspace sharing where appropriate;
+- observability, privacy, security and user-controlled data governance;
+- scalable entitlement, quota and monetization infrastructure.
+
+### Competitive objective
+
+TRIDENT should ultimately provide the major capabilities users reasonably
+expect from leading general-purpose AI platforms while differentiating through
+its Workspace-first architecture, persistent contextual continuity, integrated
+Knowledge and Memory, orchestration, modular extensibility and coherent
+cross-workflow experience.
+
+Competitive parity is not sufficient by itself.
+
+Each capability must answer:
+
+1. Does it strengthen the intelligent Workspace?
+2. Can it evolve across TRIDENT AI, TRIDENT PRO and NOVA TRIDENT without
+   architectural duplication?
+3. Does it preserve security, sustainable economics and user trust?
+
+The detailed product principles, edition strategy, economics and long-term
+success conditions are defined in `docs/product-vision.md`.
+
+Implementation remains incremental and subject to the TRIDENT Rules Bible,
+security baseline, architecture boundaries, ADR process and measurable quality
+gates.
