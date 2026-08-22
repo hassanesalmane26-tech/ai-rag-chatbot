@@ -108,3 +108,37 @@ def serialize_audit_event(event: AuditEvent) -> dict:
         "previous_hash": event.previous_hash, "event_hash": event.event_hash,
         "created_at": _timestamp(event.created_at),
     }
+
+
+WORKSPACE_ACTIVITY_LABELS = {
+    "workspace.created": "Workspace créé",
+    "workspace.updated": "Workspace mis à jour",
+    "conversation.created": "Conversation créée",
+    "conversation.message_created": "Nova a répondu",
+    "document.created": "Source ajoutée",
+    "document.retry_requested": "Indexation relancée",
+    "document.deleted": "Source supprimée",
+    "memory.created": "Mémoire créée",
+    "memory.updated": "Mémoire mise à jour",
+    "memory.deleted": "Mémoire supprimée",
+}
+
+
+def workspace_activity_query(db: Session, workspace_id: str):
+    """Return only user-relevant activity; security audit internals stay private."""
+    return db.query(AuditEvent).filter(
+        AuditEvent.workspace_id == workspace_id,
+        AuditEvent.outcome == "success",
+        AuditEvent.action.in_(tuple(WORKSPACE_ACTIVITY_LABELS)),
+    ).order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
+
+
+def serialize_workspace_activity(event: AuditEvent) -> dict:
+    return {
+        "id": event.id,
+        "action": event.action,
+        "label": WORKSPACE_ACTIVITY_LABELS[event.action],
+        "resource_type": event.resource_type,
+        "resource_id": event.resource_id,
+        "created_at": _timestamp(event.created_at),
+    }

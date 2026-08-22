@@ -51,6 +51,21 @@ async function request(url, options = {}) {
   return (await requestEnvelope(url, options)).data;
 }
 
+async function requestBinary(url) {
+  const token = accessTokenProvider ? await accessTokenProvider() : null;
+  const response = await fetch(`${API}/v1${url}`, {
+    credentials: "include",
+    headers: { "X-Request-ID": requestId(), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const error = new Error(payload.error?.message || `Erreur ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+  return response.blob();
+}
+
 async function listAll(url) {
   const values = [];
   let offset = 0;
@@ -95,6 +110,7 @@ export const sendWorkspaceMessage = (workspaceId, conversationId, content) => re
 export const listDocuments = (workspaceId) => listAll(`/workspaces/${workspaceId}/documents`);
 export const deleteDocument = (workspaceId, documentId) => request(`/workspaces/${workspaceId}/documents/${documentId}`, { method: "DELETE" });
 export const retryDocument = (workspaceId, documentId) => request(`/workspaces/${workspaceId}/documents/${documentId}/retry`, { method: "POST" });
+export const downloadDocument = (workspaceId, documentId) => requestBinary(`/workspaces/${workspaceId}/documents/${documentId}/original`);
 export async function uploadDocument(workspaceId, file) {
   const form = new FormData(); form.append("file", file);
   return request(`/workspaces/${workspaceId}/documents`, { method: "POST", body: form });
@@ -108,3 +124,4 @@ export const updateMemory = (workspaceId, memoryId, payload) => request(`/worksp
 });
 export const deleteMemory = (workspaceId, memoryId) => request(`/workspaces/${workspaceId}/memories/${memoryId}`, { method: "DELETE" });
 export const listWorkspaceModules = (workspaceId) => request(`/workspaces/${workspaceId}/modules`);
+export const listWorkspaceActivity = (workspaceId) => listAll(`/workspaces/${workspaceId}/activity`);

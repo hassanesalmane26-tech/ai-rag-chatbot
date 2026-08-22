@@ -220,6 +220,15 @@ def delete_document(db: Session, document: WorkspaceDocument) -> None:
         raise HTTPException(status_code=503, detail="Le document n’a pas pu être supprimé complètement.") from exc
 
 
+def read_document_original(document: WorkspaceDocument) -> bytes:
+    """Read one already-authorized original through the storage boundary."""
+    storage_key = document.storage_key or f"{document.workspace_id}/{document.storage_name}"
+    try:
+        return _storage().read(storage_key)
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=404, detail="Le fichier original est introuvable.") from exc
+
+
 def serialize_document(document: WorkspaceDocument) -> dict:
     return {
         "id": document.id,

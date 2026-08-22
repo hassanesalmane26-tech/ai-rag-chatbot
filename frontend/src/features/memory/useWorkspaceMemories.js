@@ -45,6 +45,13 @@ export default function useWorkspaceMemories(workspaceId) {
     finally { if (acceptsMemoryResult(workspaceRef.current, workspaceId)) setMutationId(null); }
   }, [workspaceId]);
 
+  const update = useCallback(async (memoryId, payload) => {
+    setMutationId(memoryId); setError("");
+    try { const updated = await updateMemory(workspaceId, memoryId, payload); if (acceptsMemoryResult(workspaceRef.current, workspaceId)) setMemories((current) => upsertMemory(current, updated)); return true; }
+    catch (err) { if (acceptsMemoryResult(workspaceRef.current, workspaceId)) setError(err.message); return false; }
+    finally { if (acceptsMemoryResult(workspaceRef.current, workspaceId)) setMutationId(null); }
+  }, [workspaceId]);
+
   const remove = useCallback(async (memoryId) => {
     setMutationId(memoryId); setError("");
     try { await deleteMemory(workspaceId, memoryId); if (acceptsMemoryResult(workspaceRef.current, workspaceId)) setMemories((current) => current.filter((item) => item.id !== memoryId)); }
@@ -52,5 +59,5 @@ export default function useWorkspaceMemories(workspaceId) {
     finally { if (acceptsMemoryResult(workspaceRef.current, workspaceId)) setMutationId(null); }
   }, [workspaceId]);
 
-  return { memories, loading, mutationId, error, refresh, create, toggle, remove };
+  return { memories, loading, mutationId, error, refresh, create, update, toggle, remove };
 }

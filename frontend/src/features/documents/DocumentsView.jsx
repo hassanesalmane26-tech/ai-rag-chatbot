@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { AlertTriangle, FileText, LoaderCircle, RefreshCw, ShieldCheck, Trash2, Upload } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { AlertTriangle, FileText, LoaderCircle, RefreshCw, Search, ShieldCheck, Trash2, Upload } from "lucide-react";
 import useWorkspaceContext from "../../hooks/useWorkspaceContext";
 import {
   documentStatusLabel,
@@ -11,7 +11,13 @@ export default function DocumentsView() {
   const { activeWorkspace, activeWorkspaceId } = useWorkspaceContext();
   const { documents, loading, uploading, deletingId, retryingId, error, refresh, uploadDocument, deleteDocument, retryDocument } = useWorkspaceDocuments(activeWorkspaceId);
   const [dragging, setDragging] = useState(false);
+  const [query, setQuery] = useState("");
   const inputRef = useRef(null);
+  const filteredDocuments = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("fr");
+    return normalized ? documents.filter((document) => document.display_name.toLocaleLowerCase("fr").includes(normalized)) : documents;
+  }, [documents, query]);
+  const uploadedAt = (value) => value ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(value)) : "date indisponible";
 
   async function importFile(file) {
     const imported = await uploadDocument(file);
@@ -50,11 +56,11 @@ export default function DocumentsView() {
 
     {error && <div className="inline-error document-error" role="alert"><AlertTriangle size={18} /><span>{error}</span><button type="button" onClick={refresh} disabled={loading}>Réessayer</button></div>}
 
-    <div className="document-section-heading"><div><span>BIBLIOTHÈQUE DU WORKSPACE</span><h3>Sources disponibles</h3></div>{!loading && documents.length > 0 && <button type="button" className="document-refresh" onClick={refresh} aria-label="Actualiser les documents"><RefreshCw size={16} /> Actualiser</button>}</div>
+    <div className="document-section-heading"><div><span>BIBLIOTHÈQUE DU WORKSPACE</span><h3>Sources disponibles</h3></div>{!loading && documents.length > 0 && <div className="knowledge-tools"><label><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filtrer les sources" aria-label="Filtrer les sources Knowledge" /></label><button type="button" className="document-refresh" onClick={refresh} aria-label="Actualiser les documents"><RefreshCw size={16} /> Actualiser</button></div>}</div>
 
-    {loading ? <div className="document-loading" aria-live="polite"><LoaderCircle className="spin" /><span>Synchronisation de Knowledge…</span></div> : <div className="document-grid">{documents.length === 0 ? <div className="empty-state"><FileText size={30} /><h3>Donnez du contexte à Nova</h3><p>Importez votre première source privée dans Knowledge pour enrichir ce Workspace.</p><button type="button" onClick={() => inputRef.current?.click()}>Choisir une première source</button></div> : documents.map((document) => <article key={document.id} className={`document-card document-card--${document.status}`}>
+    {loading ? <div className="document-loading" aria-live="polite"><LoaderCircle className="spin" /><span>Synchronisation de Knowledge…</span></div> : <div className="document-grid">{documents.length === 0 ? <div className="empty-state"><FileText size={30} /><h3>Donnez du contexte à Nova</h3><p>Importez votre première source privée dans Knowledge pour enrichir ce Workspace.</p><button type="button" onClick={() => inputRef.current?.click()}>Choisir une première source</button></div> : filteredDocuments.length === 0 ? <div className="empty-state"><Search size={28} /><h3>Aucune source correspondante</h3><p>Essayez un autre nom de fichier.</p><button type="button" onClick={() => setQuery("")}>Effacer le filtre</button></div> : filteredDocuments.map((document) => <article key={document.id} className={`document-card document-card--${document.status}`}>
       <div className="document-card__icon"><FileText size={22} /></div>
-      <div className="document-card__body"><strong title={document.display_name}>{document.display_name}</strong><span>{formatDocumentSize(document.size_bytes)} · {documentStatusLabel(document.status)}</span>{document.error_message && <small>{document.error_message}</small>}</div>
+      <div className="document-card__body"><strong title={document.display_name}>{document.display_name}</strong><span>{formatDocumentSize(document.size_bytes)} · ajouté le {uploadedAt(document.created_at)}</span>{document.error_message && <small>{document.error_message}</small>}</div>
       <div className="document-card__status" title={documentStatusLabel(document.status)}>{document.status === "failed" ? <AlertTriangle size={15} /> : <ShieldCheck size={15} />}<span>{document.status === "indexed" ? "INDEXÉ" : document.status.toUpperCase()}</span></div>
       <div className="document-card__actions">
         {document.status === "failed" && <button className="document-card__retry" type="button" onClick={() => retryDocument(document.id)} aria-label={`Relancer l’indexation de ${document.display_name}`} disabled={Boolean(retryingId) || Boolean(deletingId)}>{retryingId === document.id ? <LoaderCircle className="spin" size={16} /> : <RefreshCw size={16} />}</button>}

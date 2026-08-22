@@ -1,6 +1,8 @@
 """Public Genesis API. All product resources are nested below Workspace."""
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from urllib.parse import quote
+
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -14,6 +16,7 @@ from app.governance.quotas import consume_hourly_quota, enforce_resource_quota
 from app.knowledge.service import (
     create_document,
     delete_document,
+    read_document_original,
     retry_document,
     serialize_document,
 )
@@ -264,6 +267,26 @@ def list_documents(
     total = query.count()
     documents = query.order_by(WorkspaceDocument.created_at.desc(), WorkspaceDocument.id.desc()).offset(page.offset).limit(page.limit).all()
     return data([serialize_document(document) for document in documents], {"pagination": page_meta(page, total)})
+
+
+@router.get("/workspaces/{workspace_id}/documents/{document_id}/original")
+def download_document_original(
+    workspace_id: str,
+    document_id: str,
+    db: Session = Depends(get_db),
+    _tenant: TenantContext = Depends(require_workspace_access),
+):
+    document = db.get(WorkspaceDocument, document_id)
+    if not document or document.workspace_id != workspace_id:
+        raise HTTPException(status_code=404, detail="Document introuvable.")
+    return Response(
+        content=read_document_original(document),
+        media_type=document.media_type or "application/octet-stream",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(document.display_name)}",
+            "Content-Length": str(document.size_bytes),
+        },
+    )
 
 
 @router.post("/workspaces/{workspace_id}/documents", status_code=201)

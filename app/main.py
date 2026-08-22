@@ -27,6 +27,7 @@ from app.identity.oidc import OIDCConfiguration, OIDCIdentityVerifier
 from app.identity.session_router import router as session_router
 from app.governance.rate_limit import FixedWindowRateLimiter
 from app.governance.router import router as governance_router
+from app.governance.workspace_router import router as workspace_activity_router
 from app.memory.router import router as memory_router
 from app.modules.router import router as modules_router
 
@@ -281,6 +282,7 @@ def create_app(
 
     application.include_router(session_router)
     application.include_router(governance_router)
+    application.include_router(workspace_activity_router)
     application.include_router(genesis_router)
     application.include_router(memory_router)
     application.include_router(modules_router)

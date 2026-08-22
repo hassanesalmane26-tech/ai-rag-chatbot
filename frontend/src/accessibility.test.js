@@ -42,3 +42,15 @@ test("entry failures are announced and controls use native buttons", () => {
   assert.match(entry, /type="button"/);
   assert.doesNotMatch(entry, /onClick=\{[^}]+\}[^>]*role="button"/);
 });
+
+test("command and product onboarding dialogs are keyboard dismissable", () => {
+  const command = readFileSync(new URL("src/components/command/CommandPalette.jsx", root), "utf8");
+  const onboarding = readFileSync(new URL("src/features/onboarding/ProductOnboarding.jsx", root), "utf8");
+  for (const surface of [command, onboarding]) {
+    assert.match(surface, /role="dialog"/);
+    assert.match(surface, /aria-modal="true"/);
+    assert.match(surface, /event\.key/);
+  }
+  assert.match(command, /inputRef\.current\?\.focus/);
+  assert.match(onboarding, /closeRef\.current\?\.focus/);
+});

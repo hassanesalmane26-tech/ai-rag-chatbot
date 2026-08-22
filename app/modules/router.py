@@ -27,5 +27,6 @@ def list_workspace_modules(
         raise HTTPException(status_code=404, detail="Workspace introuvable.")
     return {
         "data": [serialize_module(module) for module in modules_for_edition()],
+        # Historical API compatibility identifier; public copy uses TRIDENT AI.
         "meta": {"edition": "genesis"},
     }
