@@ -3,6 +3,7 @@ import {
   endSession,
   getCurrentSession,
   getSessionConfiguration,
+  onboardCurrentUser,
   selectSessionContext,
   startSessionLogin,
 } from "../services/api";
@@ -21,7 +22,12 @@ export function SessionProvider({ children }) {
         setSession(null); setState("unavailable"); setError(null); return;
       }
       try {
-        const value = await getCurrentSession();
+        let value = await getCurrentSession();
+        if (!Array.isArray(value.organizations) || value.organizations.length === 0) {
+          setSession(value);
+          setState("onboarding");
+          value = await onboardCurrentUser();
+        }
         setSession(value); setState("authenticated"); setError(null);
       } catch (cause) {
         if (cause.status === 401) {

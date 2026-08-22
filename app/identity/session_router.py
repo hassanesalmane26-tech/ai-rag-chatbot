@@ -23,6 +23,7 @@ from app.identity.session_service import (
     utcnow,
 )
 from app.security.dependencies import require_principal
+from app.tenancy.service import TenantAccessDenied, onboard_personal_tenant
 
 router = APIRouter(prefix="/v1/session", tags=["Session"])
 
@@ -141,13 +142,28 @@ async def oidc_callback(
         application_session, token, csrf = create_session(
             db, principal, configured.session_ttl_seconds
         )
+        onboarding = onboard_personal_tenant(db, principal)
+        if onboarding is not None:
+            application_session.active_organization_id = onboarding.organization.id
+            application_session.active_workspace_id = onboarding.workspace.id
+        if onboarding is not None and onboarding.created:
+            append_audit_event(
+                db,
+                action="organization.personal_onboarded",
+                resource_type="organization",
+                resource_id=onboarding.organization.id,
+                principal=principal,
+                organization_id=onboarding.organization.id,
+                workspace_id=onboarding.workspace.id,
+                request_id=request.state.request_id,
+            )
         append_audit_event(
             db, action="session.created", resource_type="session",
             resource_id=application_session.id, principal=principal,
             request_id=request.state.request_id,
         )
         db.commit()
-    except (ValueError, InvalidIdentityCredential) as exc:
+    except (ValueError, InvalidIdentityCredential, TenantAccessDenied) as exc:
         db.rollback()
         raise AuthenticationError("OIDC_CALLBACK_REJECTED") from exc
     response = RedirectResponse(transaction.return_to, status_code=303)
@@ -176,6 +192,38 @@ def current_session(
     db: Session = Depends(get_db),
     principal: AuthenticatedPrincipal = Depends(require_principal),
 ):
+    return session_payload(request, db, principal)
+
+
+@router.post("/onboarding")
+def onboard_current_user(
+    request: Request,
+    db: Session = Depends(get_db),
+    principal: AuthenticatedPrincipal = Depends(require_principal),
+):
+    """Recover an authenticated user who has not yet received a tenant."""
+    application_session = getattr(request.state, "application_session", None)
+    if application_session is None:
+        raise AuthorizationError("Une session navigateur est requise.")
+    try:
+        onboarding = onboard_personal_tenant(db, principal)
+    except TenantAccessDenied as exc:
+        raise AuthorizationError() from exc
+    if onboarding is not None:
+        application_session.active_organization_id = onboarding.organization.id
+        application_session.active_workspace_id = onboarding.workspace.id
+    if onboarding is not None and onboarding.created:
+        append_audit_event(
+            db,
+            action="organization.personal_onboarded",
+            resource_type="organization",
+            resource_id=onboarding.organization.id,
+            principal=principal,
+            organization_id=onboarding.organization.id,
+            workspace_id=onboarding.workspace.id,
+            request_id=request.state.request_id,
+        )
+    db.commit()
     return session_payload(request, db, principal)
 
 

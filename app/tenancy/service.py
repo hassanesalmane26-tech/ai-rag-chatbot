@@ -1,6 +1,7 @@
 """Central tenant context resolution; wired to HTTP authorization in AI-2."""
 
 from dataclasses import dataclass
+import uuid
 
 from sqlalchemy.orm import Session
 
@@ -22,6 +23,17 @@ class TenantAccessDenied(LookupError):
 
 class LegacyOrganizationClaimError(RuntimeError):
     """The one-time legacy adoption preconditions were not satisfied."""
+
+
+PERSONAL_TENANT_NAMESPACE = uuid.UUID("a796d702-f399-4cd0-846f-e323fe2fc6fc")
+
+
+@dataclass(frozen=True, slots=True)
+class PersonalTenantOnboarding:
+    organization: Organization
+    membership: Membership
+    workspace: Workspace
+    created: bool
 
 
 def _persisted_mapping_for_principal(
@@ -47,6 +59,73 @@ class TenantContext:
     membership_id: str
     role: MembershipRole
     workspace_id: str
+
+
+def onboard_personal_tenant(
+    db: Session, principal: AuthenticatedPrincipal
+) -> PersonalTenantOnboarding | None:
+    """Create the minimum personal tenant for a user with no Membership.
+
+    Locking the authoritative User serializes onboarding in PostgreSQL. Stable,
+    user-derived identifiers provide an additional uniqueness boundary for
+    retries and database engines that do not implement row-level locks.
+    Existing members are deliberately left unchanged, including the controlled
+    owner of the legacy Organization.
+    """
+    user = (
+        db.query(User)
+        .filter(User.id == principal.user_id, User.status == "active")
+        .with_for_update()
+        .one_or_none()
+    )
+    if user is None:
+        raise TenantAccessDenied("Active principal User is unavailable")
+
+    organization_id = str(
+        uuid.uuid5(PERSONAL_TENANT_NAMESPACE, f"organization:{principal.user_id}")
+    )
+    workspace_id = str(
+        uuid.uuid5(PERSONAL_TENANT_NAMESPACE, f"workspace:{principal.user_id}")
+    )
+    existing_membership = (
+        db.query(Membership)
+        .filter(Membership.user_id == principal.user_id)
+        .order_by(Membership.created_at.asc())
+        .first()
+    )
+    if existing_membership is not None:
+        workspace = db.get(Workspace, workspace_id)
+        organization = db.get(Organization, organization_id)
+        if (
+            existing_membership.organization_id == organization_id
+            and organization is not None
+            and workspace is not None
+            and workspace.organization_id == organization_id
+        ):
+            return PersonalTenantOnboarding(
+                organization, existing_membership, workspace, False
+            )
+        return None
+    organization = Organization(
+        id=organization_id,
+        name="Organization personnelle",
+        slug=f"personal-{principal.user_id}",
+        ownership_state="active",
+    )
+    membership = Membership(
+        user_id=principal.user_id,
+        organization_id=organization_id,
+        role=MembershipRole.OWNER.value,
+    )
+    workspace = Workspace(
+        id=workspace_id,
+        organization_id=organization_id,
+        name="Mon Workspace",
+        description="Votre Workspace personnel TRIDENT AI",
+    )
+    db.add_all([organization, membership, workspace])
+    db.flush()
+    return PersonalTenantOnboarding(organization, membership, workspace, True)
 
 
 def ensure_legacy_organization(db: Session) -> Organization:

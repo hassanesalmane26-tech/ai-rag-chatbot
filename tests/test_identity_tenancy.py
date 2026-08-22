@@ -16,7 +16,7 @@ from app.identity.contracts import (
 )
 from app.identity.models import ExternalIdentity, User
 from app.identity.service import resolve_or_create_principal, resolve_principal
-from app.governance.models import AuditEvent
+from app.governance.models import AuditEvent, EntitlementGrant
 from app.tenancy.models import Membership, MembershipRole, Organization
 from app.tenancy.service import (
     LEGACY_ORGANIZATION_ID,
@@ -25,6 +25,7 @@ from app.tenancy.service import (
     claim_legacy_organization,
     claim_persisted_legacy_organization,
     ensure_legacy_organization,
+    onboard_personal_tenant,
     tenant_context_for_workspace,
 )
 
@@ -99,6 +100,84 @@ class IdentityTenancyTests(unittest.TestCase):
         self.assertEqual(
             self.db.query(Membership).filter_by(user_id=principal.user_id).count(), 0
         )
+
+    def test_first_login_creates_one_personal_tenant_without_founder_entitlement(self):
+        user = User()
+        self.db.add(user)
+        self.db.flush()
+        principal = AuthenticatedPrincipal(user.id, "https://issuer.example", "personal-user")
+
+        onboarding = onboard_personal_tenant(self.db, principal)
+        self.db.commit()
+
+        self.assertIsNotNone(onboarding)
+        self.assertEqual(self.db.query(Organization).count(), 1)
+        self.assertEqual(self.db.query(Workspace).count(), 1)
+        membership = self.db.query(Membership).one()
+        workspace = self.db.query(Workspace).one()
+        self.assertEqual(membership.user_id, user.id)
+        self.assertEqual(membership.role, MembershipRole.OWNER.value)
+        self.assertEqual(workspace.organization_id, membership.organization_id)
+        self.assertNotEqual(membership.organization_id, LEGACY_ORGANIZATION_ID)
+        self.assertEqual(self.db.query(EntitlementGrant).count(), 0)
+
+    def test_personal_tenant_onboarding_retry_is_idempotent(self):
+        user = User()
+        self.db.add(user)
+        self.db.flush()
+        principal = AuthenticatedPrincipal(user.id, "https://issuer.example", "retry-user")
+
+        first = onboard_personal_tenant(self.db, principal)
+        self.db.commit()
+        retry = onboard_personal_tenant(self.db, principal)
+        self.db.commit()
+
+        self.assertIsNotNone(first)
+        self.assertIsNotNone(retry)
+        self.assertFalse(retry.created)
+        self.assertEqual(retry.organization.id, first.organization.id)
+        self.assertEqual(retry.workspace.id, first.workspace.id)
+        self.assertEqual(self.db.query(Organization).count(), 1)
+        self.assertEqual(self.db.query(Membership).count(), 1)
+        self.assertEqual(self.db.query(Workspace).count(), 1)
+
+    def test_personal_tenant_onboarding_leaves_existing_member_unchanged(self):
+        user = User()
+        organization = Organization(name="Existing", slug="existing", ownership_state="active")
+        self.db.add_all([user, organization])
+        self.db.flush()
+        membership = Membership(
+            user_id=user.id,
+            organization_id=organization.id,
+            role=MembershipRole.MEMBER.value,
+        )
+        workspace = Workspace(name="Existing Workspace", organization_id=organization.id)
+        self.db.add_all([membership, workspace])
+        self.db.commit()
+        principal = AuthenticatedPrincipal(user.id, "https://issuer.example", "existing-user")
+
+        result = onboard_personal_tenant(self.db, principal)
+        self.db.commit()
+
+        self.assertIsNone(result)
+        self.assertEqual(self.db.query(Organization).count(), 1)
+        self.assertEqual(self.db.query(Membership).one().role, MembershipRole.MEMBER.value)
+        self.assertEqual(self.db.query(Workspace).one().id, workspace.id)
+
+    def test_personal_tenant_remains_isolated_from_other_users(self):
+        user = User()
+        other_user = User()
+        self.db.add_all([user, other_user])
+        self.db.flush()
+        principal = AuthenticatedPrincipal(user.id, "https://issuer.example", "owner")
+        other = AuthenticatedPrincipal(other_user.id, "https://issuer.example", "other")
+        onboarding = onboard_personal_tenant(self.db, principal)
+        self.db.commit()
+
+        context = tenant_context_for_workspace(self.db, principal, onboarding.workspace.id)
+        self.assertEqual(context.organization_id, onboarding.organization.id)
+        with self.assertRaises(TenantAccessDenied):
+            tenant_context_for_workspace(self.db, other, onboarding.workspace.id)
 
     def test_membership_roles_and_uniqueness_are_bounded(self):
         user = User()

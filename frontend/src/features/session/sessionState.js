@@ -7,3 +7,7 @@ export function organizationChoices(session) {
     ? session.organizations.filter((organization) => organization?.id && Array.isArray(organization.workspaces))
     : [];
 }
+
+export function needsPersonalOnboarding(session) {
+  return organizationChoices(session).length === 0;
+}

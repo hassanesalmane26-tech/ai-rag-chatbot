@@ -260,6 +260,38 @@ class SessionLifecycleTests(unittest.TestCase):
     def test_authorization_code_pkce_session_context_csrf_and_logout(self):
         asyncio.run(self.scenario())
 
+    async def first_login_scenario(self):
+        db = self.Session()
+        db.query(Membership).delete()
+        db.query(Workspace).delete()
+        db.query(Organization).delete()
+        db.commit()
+        db.close()
+
+        transport = httpx.ASGITransport(app=self.application, raise_app_exceptions=False)
+        async with self.application.router.lifespan_context(self.application):
+            async with httpx.AsyncClient(
+                transport=transport, base_url="http://test", follow_redirects=False
+            ) as client:
+                started = await client.post("/v1/session/login", json={"return_to": "/"})
+                state = started.json()["data"]["authorization_url"].split("state=")[1]
+                callback = await client.get(
+                    "/v1/session/callback", params={"code": "valid-code", "state": state}
+                )
+                self.assertEqual(callback.status_code, 303, callback.text)
+                current = await client.get("/v1/session")
+                self.assertEqual(current.status_code, 200, current.text)
+                payload = current.json()["data"]
+                self.assertEqual(len(payload["organizations"]), 1)
+                self.assertEqual(payload["active_organization_id"], payload["organizations"][0]["id"])
+                self.assertEqual(
+                    payload["active_workspace_id"],
+                    payload["organizations"][0]["workspaces"][0]["id"],
+                )
+
+    def test_first_login_onboards_and_selects_personal_workspace(self):
+        asyncio.run(self.first_login_scenario())
+
     def test_expired_and_revoked_sessions_fail_closed(self):
         db = self.Session()
         user = db.query(User).filter_by().first()

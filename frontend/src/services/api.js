@@ -69,6 +69,7 @@ export const startSessionLogin = (returnTo = "/") => request("/session/login", {
   method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ return_to: returnTo }),
 });
 export const getCurrentSession = () => request("/session");
+export const onboardCurrentUser = () => request("/session/onboarding", { method: "POST" });
 export const selectSessionContext = (organizationId, workspaceId = null) => request("/session/context", {
   method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ organization_id: organizationId, workspace_id: workspaceId }),
 });
