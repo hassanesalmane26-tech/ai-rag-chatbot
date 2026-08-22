@@ -29,7 +29,7 @@ export default function Header({
         </IconButton>
       </div>
 
-      <button className="topbar-command" type="button" onClick={onOpenCommand} aria-label="Ouvrir Search or ask TRIDENT"><Search size={17} /><span>Search or ask TRIDENT…</span><kbd>⌘ K</kbd></button>
+      <button className="topbar-command" type="button" onClick={onOpenCommand} aria-label="Ouvrir TRIDENT Command"><Search size={17} /><span>Rechercher ou demander à TRIDENT…</span><kbd>⌘ K</kbd></button>
 
       <div className="topbar-right">
         <span className="workspace-status"><i /> Workspace actif</span>

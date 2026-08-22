@@ -17,10 +17,10 @@ MODULES = (
     ModuleDescriptor("conversations", "Nova", 20, ("genesis", "ai", "pro", "nova")),
     ModuleDescriptor("knowledge", "Knowledge", 30, ("genesis", "ai", "pro", "nova")),
     ModuleDescriptor("memory", "Memory", 40, ("genesis", "ai", "pro", "nova")),
-    ModuleDescriptor("files", "Files", 50, ("ai", "pro", "nova")),
-    ModuleDescriptor("artifacts", "Artifacts", 60, ("ai", "pro", "nova")),
-    ModuleDescriptor("activity", "Activity", 70, ("ai", "pro", "nova")),
-    ModuleDescriptor("settings", "Settings", 80, ("ai", "pro", "nova")),
+    ModuleDescriptor("files", "Fichiers", 50, ("ai", "pro", "nova")),
+    ModuleDescriptor("artifacts", "Artefacts", 60, ("ai", "pro", "nova")),
+    ModuleDescriptor("activity", "Activité", 70, ("ai", "pro", "nova")),
+    ModuleDescriptor("settings", "Paramètres", 80, ("ai", "pro", "nova")),
 )
 
 

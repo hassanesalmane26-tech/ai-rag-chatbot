@@ -1,6 +1,6 @@
 # TRIDENT AI
 
-TRIDENT is a Workspace-centric AI Operating System. TRIDENT AI V1 combines a
+TRIDENT is a Workspace-centric AI Operating System. TRIDENT AI V1.0.0 combines a
 Workspace Home, Nova, Knowledge, explicit Memory, Files, Artifacts, Activity,
 Settings and a Workspace command surface behind a declarative module boundary.
 It evolves additively from the immutable historical baseline tagged

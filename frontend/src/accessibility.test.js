@@ -25,6 +25,11 @@ test("current product navigation exposes Nova without Genesis presentation class
   const home = readFileSync(new URL("src/features/home/WorkspaceHome.jsx", root), "utf8");
   const workspaceStyles = readFileSync(new URL("src/styles/workspaces.css", root), "utf8");
   assert.match(registry, /id: "conversations", label: "Nova"/);
+  assert.match(registry, /id: "home", label: "Accueil"/);
+  assert.match(registry, /id: "files", label: "Fichiers"/);
+  assert.match(registry, /id: "artifacts", label: "Artefacts"/);
+  assert.match(registry, /id: "activity", label: "Activité"/);
+  assert.match(registry, /id: "settings", label: "Paramètres"/);
   assert.doesNotMatch(home, /genesis-/i);
   assert.doesNotMatch(workspaceStyles, /\.genesis-/i);
 });

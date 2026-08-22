@@ -3,6 +3,8 @@ export default function VisualEnvironment() {
     <div className="trident-environment" aria-hidden="true">
       <div className="trident-environment__grid" />
       <div className="trident-environment__horizon" />
+      <div className="trident-environment__orbit trident-environment__orbit--one" />
+      <div className="trident-environment__orbit trident-environment__orbit--two" />
       <div className="trident-environment__beam trident-environment__beam--one" />
       <div className="trident-environment__beam trident-environment__beam--two" />
       <div className="trident-orb trident-orb--electric" />

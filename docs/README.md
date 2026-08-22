@@ -26,6 +26,7 @@ are updated before significant implementation changes are made.
 | [GENESIS completion](phases/genesis-completion.md) | Migration, runtime and release-boundary record. |
 | [Genesis v1.0.0 freeze](releases/trident-genesis-v1.0.0.md) | Immutable baseline and release boundary. |
 | [TRIDENT AI V1 release candidate](releases/trident-ai-release-candidate.md) | Current V1 surfaces, architectural boundaries, acceptance checklist and deferrals. |
+| [TRIDENT AI V1.0.0 Gold](releases/trident-ai-v1.0.0.md) | Definitive V1 scope, interface, security, responsive support and limitations. |
 | [TRIDENT AI transition](architecture/trident-ai-transition.md) | Additive Identity and edition evolution architecture. |
 | [Sprint AI-0](phases/sprint-ai-0.md) | Freeze, publication and security-preparation record. |
 | [Sprint AI-1](phases/sprint-ai-1.md) | Provider-neutral Identity and staged Workspace tenancy. |
