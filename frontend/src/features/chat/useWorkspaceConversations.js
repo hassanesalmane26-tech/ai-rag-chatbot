@@ -11,6 +11,8 @@ export default function useWorkspaceConversations(workspaceId) {
   const [conversations, setConversations] = useState([]);
   const [activeConversation, setActiveConversationState] = useState(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
   const [sendingConversationId, setSendingConversationId] = useState(null);
   const workspaceRef = useRef(workspaceId);
   const activeConversationIdRef = useRef(null);
@@ -29,16 +31,24 @@ export default function useWorkspaceConversations(workspaceId) {
     setConversations([]);
     setActiveConversation(null);
     setSendingConversationId(null);
+    setLoading(true);
+    setCreating(false);
     setError("");
   }, [workspaceId, setActiveConversation]);
 
   const refresh = useCallback(async () => {
     if (!workspaceId) return [];
     const request = ++listRequestRef.current;
-    const values = await listConversations(workspaceId);
-    if (request !== listRequestRef.current || !acceptsWorkspaceResult(workspaceRef.current, workspaceId)) return [];
-    setConversations(values);
-    return values;
+    setLoading(true);
+    setError("");
+    try {
+      const values = await listConversations(workspaceId);
+      if (request !== listRequestRef.current || !acceptsWorkspaceResult(workspaceRef.current, workspaceId)) return [];
+      setConversations(values);
+      return values;
+    } finally {
+      if (request === listRequestRef.current && acceptsWorkspaceResult(workspaceRef.current, workspaceId)) setLoading(false);
+    }
   }, [workspaceId]);
 
   const selectConversation = useCallback(async (conversation) => {
@@ -67,7 +77,9 @@ export default function useWorkspaceConversations(workspaceId) {
   }, [workspaceId, refresh]);
 
   const addConversation = useCallback(async () => {
-    if (!workspaceId) return;
+    if (!workspaceId || creating) return;
+    setCreating(true);
+    setError("");
     try {
       const created = await createConversation(workspaceId);
       if (!acceptsWorkspaceResult(workspaceRef.current, workspaceId)) return;
@@ -75,8 +87,10 @@ export default function useWorkspaceConversations(workspaceId) {
       await selectConversation(created);
     } catch (err) {
       if (acceptsWorkspaceResult(workspaceRef.current, workspaceId)) setError(err.message);
+    } finally {
+      if (acceptsWorkspaceResult(workspaceRef.current, workspaceId)) setCreating(false);
     }
-  }, [workspaceId, selectConversation]);
+  }, [workspaceId, creating, selectConversation]);
 
   const sendMessage = useCallback(async (content) => {
     const conversationId = activeConversationIdRef.current;
@@ -121,6 +135,8 @@ export default function useWorkspaceConversations(workspaceId) {
     conversations,
     activeConversation,
     error,
+    loading,
+    creating,
     isSending: sendingConversationId === activeConversation?.id,
     refresh,
     selectConversation,

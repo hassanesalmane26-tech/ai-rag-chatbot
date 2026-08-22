@@ -11,3 +11,7 @@ export function organizationChoices(session) {
 export function needsPersonalOnboarding(session) {
   return organizationChoices(session).length === 0;
 }
+
+export function membershipRoleLabel(role) {
+  return ({ owner: "Propriétaire", admin: "Administrateur", member: "Membre" })[role] || "Membre";
+}

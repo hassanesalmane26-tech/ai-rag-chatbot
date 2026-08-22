@@ -74,11 +74,11 @@
   --layout-sidebar-width: 286px;
   --layout-content-max-width: 1320px;
   --layout-mobile-gutter: 14px;
-  --layout-bottom-nav-height: 72px;
-  --layout-bottom-nav-offset: calc(var(--layout-bottom-nav-height) + env(safe-area-inset-bottom) + var(--space-5));
+  --layout-bottom-nav-height: 64px;
+  --layout-bottom-nav-offset: calc(var(--layout-bottom-nav-height) + env(safe-area-inset-bottom) + var(--space-3));
   --control-height-sm: 42px;
   --control-height-md: 44px;
-  --control-height-touch: 48px;
+  --control-height-touch: 44px;
   --icon-size-sm: 16px;
   --icon-size-md: 18px;
   --icon-size-lg: 22px;

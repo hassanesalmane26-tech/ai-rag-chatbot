@@ -20,6 +20,22 @@ test("Workspace shell retains landmark and current-page semantics", () => {
   assert.match(sidebar, /aria-current=/);
 });
 
+test("current product navigation exposes Nova without Genesis presentation classes", () => {
+  const registry = readFileSync(new URL("src/app/modules/registry.jsx", root), "utf8");
+  const home = readFileSync(new URL("src/features/home/WorkspaceHome.jsx", root), "utf8");
+  const workspaceStyles = readFileSync(new URL("src/styles/workspaces.css", root), "utf8");
+  assert.match(registry, /id: "conversations", label: "Nova"/);
+  assert.doesNotMatch(home, /genesis-/i);
+  assert.doesNotMatch(workspaceStyles, /\.genesis-/i);
+});
+
+test("mobile Workspace dialog supports modal and keyboard-close semantics", () => {
+  const selector = readFileSync(new URL("src/components/workspace/MobileWorkspaceSelector.jsx", root), "utf8");
+  assert.match(selector, /role="dialog"/);
+  assert.match(selector, /aria-modal="true"/);
+  assert.match(selector, /event\.key === "Escape"/);
+});
+
 test("entry failures are announced and controls use native buttons", () => {
   const entry = readFileSync(new URL("src/features/session/EntryExperience.jsx", root), "utf8");
   assert.match(entry, /role="alert"/);

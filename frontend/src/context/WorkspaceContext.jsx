@@ -6,11 +6,19 @@ import {
 } from "../services/api";
 import { WorkspaceContext } from "./workspaceContext";
 
-const ACTIVE_WORKSPACE_STORAGE_KEY = "trident.genesis.active_workspace_id";
+const ACTIVE_WORKSPACE_STORAGE_KEY = "trident.ai.active_workspace_id";
+const LEGACY_ACTIVE_WORKSPACE_STORAGE_KEY = "trident.genesis.active_workspace_id";
 
 function readPersistedWorkspaceId() {
   try {
-    return window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY);
+    const current = window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY);
+    if (current) return current;
+    const legacy = window.localStorage.getItem(LEGACY_ACTIVE_WORKSPACE_STORAGE_KEY);
+    if (legacy) {
+      window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, legacy);
+      window.localStorage.removeItem(LEGACY_ACTIVE_WORKSPACE_STORAGE_KEY);
+    }
+    return legacy;
   } catch {
     return null;
   }

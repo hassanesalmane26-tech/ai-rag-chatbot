@@ -65,7 +65,7 @@ export function SessionProvider({ children }) {
     setError(null);
     try {
       const value = await selectSessionContext(organizationId, workspaceId);
-      if (workspaceId) window.localStorage.setItem("trident.genesis.active_workspace_id", workspaceId);
+      if (workspaceId) window.localStorage.setItem("trident.ai.active_workspace_id", workspaceId);
       setSession(value);
       return value;
     } catch (cause) {

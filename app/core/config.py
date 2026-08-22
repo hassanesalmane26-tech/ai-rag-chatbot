@@ -15,7 +15,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("TRIDENT_ENV", "ENVIRONMENT"),
     )
     app_name: str = Field(
-        default="TRIDENT GENESIS",
+        default="TRIDENT AI",
         validation_alias=AliasChoices("TRIDENT_APP_NAME", "APP_NAME"),
     )
     app_version: str = Field(

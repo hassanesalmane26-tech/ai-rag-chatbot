@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canEnterWorkspace, needsPersonalOnboarding, organizationChoices } from "./sessionState.js";
+import { canEnterWorkspace, membershipRoleLabel, needsPersonalOnboarding, organizationChoices } from "./sessionState.js";
 
 test("requires a validated session and selected Organization before entering", () => {
   assert.equal(canEnterWorkspace("anonymous", null), false);
@@ -27,4 +27,11 @@ test("keeps Organization and Workspace choices server-authored", () => {
   const organizations = [{ id: "org-1", workspaces: [{ id: "workspace-1" }] }];
   assert.deepEqual(organizationChoices({ organizations }), organizations);
   assert.deepEqual(organizationChoices({ organizations: [{ name: "invalid" }] }), []);
+});
+
+test("presents bounded membership roles without changing authorization values", () => {
+  assert.equal(membershipRoleLabel("owner"), "Propriétaire");
+  assert.equal(membershipRoleLabel("admin"), "Administrateur");
+  assert.equal(membershipRoleLabel("member"), "Membre");
+  assert.equal(membershipRoleLabel("unexpected"), "Membre");
 });
