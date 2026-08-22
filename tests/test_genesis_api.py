@@ -196,8 +196,21 @@ class GenesisApiTests(unittest.TestCase):
         )
         self.assertEqual(
             [module["id"] for module in overview.json()["data"]["modules"]],
-            ["home", "conversations", "knowledge", "memory"],
+            ["home", "conversations", "knowledge", "memory", "files", "artifacts", "activity", "settings"],
         )
+
+    def test_workspace_activity_is_sanitized_and_tenant_scoped(self):
+        first, second = self.workspace("Activity owner"), self.workspace("Activity denied")
+        created = self.client.post(
+            f"/v1/workspaces/{first['id']}/conversations", json={"title": "Visible"}
+        )
+        self.assertEqual(created.status_code, 201, created.text)
+        activity = self.client.get(f"/v1/workspaces/{first['id']}/activity")
+        self.assertEqual(activity.status_code, 200, activity.text)
+        self.assertEqual(activity.json()["data"][0]["label"], "Conversation créée")
+        self.assertNotIn("actor_user_id", activity.json()["data"][0])
+        self.assertNotIn("metadata", activity.json()["data"][0])
+        self.assertEqual(self.client.get(f"/v1/workspaces/{second['id']}/activity").json()["data"][0]["label"], "Workspace créé")
 
     def test_list_contracts_are_bounded_and_paginated(self):
         self.workspace("First")
@@ -235,7 +248,7 @@ class GenesisApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.text)
         self.assertEqual(response.json()["meta"]["edition"], "genesis")
         identifiers = [module["id"] for module in response.json()["data"]]
-        self.assertEqual(identifiers, ["home", "conversations", "knowledge", "memory"])
+        self.assertEqual(identifiers, ["home", "conversations", "knowledge", "memory", "files", "artifacts", "activity", "settings"])
         self.assertEqual(len(identifiers), len(set(identifiers)))
         self.assertEqual(
             [module.order for module in modules_for_edition()], sorted(module.order for module in modules_for_edition())
@@ -548,6 +561,29 @@ class GenesisApiTests(unittest.TestCase):
         self.assertEqual(len(listed.json()["data"]), 1)
         self.assertEqual(len(vector.documents), 1)
 
+    def test_document_original_download_uses_workspace_authorization(self):
+        first, second = self.workspace("Files owner"), self.workspace("Files denied")
+        vector = InMemoryVectorStore()
+        with tempfile.TemporaryDirectory() as tempdir, patch(
+            "app.knowledge.service.DOCUMENTS_ROOT", Path(tempdir)
+        ), patch("app.knowledge.service.vectorstore", vector):
+            uploaded = self.client.post(
+                f"/v1/workspaces/{first['id']}/documents",
+                files={"file": ("private note.txt", b"workspace-only", "text/plain")},
+            )
+            self.assertEqual(uploaded.status_code, 201, uploaded.text)
+            document_id = uploaded.json()["data"]["id"]
+            downloaded = self.client.get(
+                f"/v1/workspaces/{first['id']}/documents/{document_id}/original"
+            )
+            denied = self.client.get(
+                f"/v1/workspaces/{second['id']}/documents/{document_id}/original"
+            )
+        self.assertEqual(downloaded.status_code, 200, downloaded.text)
+        self.assertEqual(downloaded.content, b"workspace-only")
+        self.assertIn("private%20note.txt", downloaded.headers["content-disposition"])
+        self.assertEqual(denied.status_code, 404, denied.text)
+
     def test_failed_ingestion_preserves_original_and_can_be_retried(self):
         workspace = self.workspace("Retry")
         failing_vector = MagicMock()
@@ -681,6 +717,7 @@ class GenesisApiTests(unittest.TestCase):
             f"/v1/workspaces/{workspace['id']}/documents",
             f"/v1/workspaces/{workspace['id']}/memories",
             f"/v1/workspaces/{workspace['id']}/modules",
+            f"/v1/workspaces/{workspace['id']}/activity",
         ]
         for path in paths:
             denied = self.client.get(path, headers=headers)
@@ -727,6 +764,8 @@ class GenesisApiTests(unittest.TestCase):
         headers = {"Authorization": "Bearer member-token"}
         readable = self.client.get(f"/v1/workspaces/{workspace['id']}/modules", headers=headers)
         self.assertEqual(readable.status_code, 200, readable.text)
+        activity = self.client.get(f"/v1/workspaces/{workspace['id']}/activity", headers=headers)
+        self.assertEqual(activity.status_code, 200, activity.text)
         denied = self.client.patch(
             f"/v1/workspaces/{workspace['id']}", json={"name": "Denied"}, headers=headers
         )
