@@ -123,8 +123,12 @@ def onboard_personal_tenant(
         name="Mon Workspace",
         description="Votre Workspace personnel TRIDENT AI",
     )
-    db.add_all([organization, membership, workspace])
+    db.add(organization)
     db.flush()
+
+    db.add_all([membership, workspace])
+    db.flush()
+
     return PersonalTenantOnboarding(organization, membership, workspace, True)
 
 
