@@ -12,6 +12,7 @@ are updated before significant implementation changes are made.
 | [Roadmap](roadmap.md) | Sequenced delivery plan and exit criteria. |
 | [Post-Gold Master Roadmap](TRIDENT_POST_GOLD_ROADMAP.md) | Official development mandate and canonical delivery sequence after TRIDENT AI V1.0.0 Gold. |
 | [Definitive Interface Reference](vision/TRIDENT_DEFINITIVE_INTERFACE_REFERENCE.md) | Preservation notice and repository target for the founder-approved canonical visual mockup. |
+| [Definitive Interface Pass](phases/trident-ai-definitive-interface.md) | Implemented spatial shell, responsive strategy, visual environment, accessibility and truthful-data boundaries. |
 | [Rules Bible](rules-bible.md) | Non-negotiable platform rules. |
 | [Engineering standards](engineering-standards.md) | Build, test, API, and delivery expectations. |
 | [Deployment architecture](deployment-architecture.md) | Production topology and operating model. |

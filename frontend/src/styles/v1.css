@@ -136,3 +136,37 @@
   .activity-timeline__mark,.status-dot,.workspace-status i { box-shadow:none; }
   .command-palette,.product-onboarding,.mobile-workspace-sheet__panel { animation:none; }
 }
+
+/* Definitive Interface Pass: a spatial Workspace with a real-data context rail. */
+.workspace-home--definitive { display:grid; grid-template-columns:minmax(0,1fr) var(--layout-context-rail-width); align-items:start; gap:18px; }
+.workspace-home__primary,.workspace-home__rail { display:grid; min-width:0; gap:16px; }
+.workspace-home__primary .workspace-hero { min-height:390px; align-items:center; }
+.workspace-home__primary .workspace-hero h2 { font-size:clamp(40px,4vw,68px); }
+.workspace-home__rail { position:sticky; top:0; }
+.workspace-home__rail .workspace-intelligence,.workspace-home__rail .workspace-activity-preview,.workspace-rail-status { border-color:rgba(139,231,255,.2); background:linear-gradient(155deg,rgba(14,48,101,.62),rgba(7,25,57,.66)); box-shadow:var(--shadow-panel); }
+.workspace-home__rail .workspace-intelligence .ds-button { width:100%; }
+.workspace-home__rail .workspace-activity-preview header { display:block; }.workspace-home__rail .workspace-activity-preview header button { margin-top:4px; }
+.workspace-home__rail .home-activity-state { min-height:86px; }
+.workspace-rail-status { display:grid; gap:6px; padding:18px; }.workspace-rail-status>span { color:var(--cyan); font-size:9px; font-weight:700; letter-spacing:.14em; }.workspace-rail-status>strong { overflow:hidden; font-size:15px; text-overflow:ellipsis; white-space:nowrap; }.workspace-rail-status p { display:flex; align-items:center; gap:8px; color:var(--text-muted); font-size:11px; }.workspace-rail-status p i { width:7px; height:7px; border-radius:50%; background:var(--success); box-shadow:0 0 12px rgba(88,231,173,.7); }.workspace-rail-status small { color:var(--text-dim); line-height:1.5; }
+.workspace-system-map { position:relative; overflow:hidden; padding:20px; border-color:rgba(139,231,255,.2); background:linear-gradient(110deg,rgba(14,45,94,.54),rgba(7,26,61,.5)); }.workspace-system-map::before { content:""; position:absolute; top:-120px; left:40%; width:300px; height:240px; border-radius:50%; background:radial-gradient(circle,rgba(101,243,239,.13),transparent 70%); }.workspace-system-map header { position:relative; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }.workspace-system-map header span { color:var(--cyan); font-size:9px; font-weight:700; letter-spacing:.14em; }.workspace-system-map header h3 { margin-top:5px; font-size:19px; }.workspace-system-map header .trident-mark { margin-right:8px; transform:scale(1.2); }.workspace-system-map>div { position:relative; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; }.workspace-system-map button { display:flex; align-items:center; gap:8px; min-width:0; min-height:52px; padding:0 11px; border:1px solid rgba(139,231,255,.13); border-radius:12px; background:rgba(255,255,255,.035); color:var(--text-muted); text-align:left; }.workspace-system-map button:hover { border-color:var(--border-emphasis); background:rgba(91,140,255,.12); color:var(--text); }.workspace-system-map button i { flex:0 0 6px; width:6px; height:6px; border-radius:50%; background:var(--cyan); box-shadow:0 0 10px var(--cyan); }.workspace-system-map button span { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.workspace-system-map button svg { flex:0 0 auto; }
+
+@media (max-width:1439px) {
+  .workspace-home--definitive { grid-template-columns:minmax(0,1fr); }
+  .workspace-home__rail { position:static; grid-template-columns:minmax(260px,.8fr) minmax(0,1.2fr); }
+  .workspace-rail-status { grid-column:1 / -1; grid-template-columns:auto minmax(0,1fr); align-items:center; }
+  .workspace-rail-status>span,.workspace-rail-status small { grid-column:1 / -1; }
+}
+@media (max-width:1180px) { .workspace-system-map>div { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (max-width:760px) {
+  .workspace-home__primary .workspace-hero { min-height:0; }
+  .workspace-home__primary .workspace-hero h2 { font-size:clamp(29px,8.5vw,36px); }
+  .workspace-home__rail { grid-template-columns:1fr; }
+  .workspace-rail-status { grid-column:auto; }
+  .workspace-system-map { padding:16px; }
+  .workspace-system-map>div { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .workspace-system-map button:last-child { grid-column:1 / -1; }
+}
+@media (max-width:390px) {
+  .workspace-system-map>div { grid-template-columns:1fr; }
+  .workspace-system-map button:last-child { grid-column:auto; }
+}

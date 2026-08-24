@@ -72,7 +72,8 @@
   --space-7: 48px;
   --space-8: 64px;
   --layout-sidebar-width: 286px;
-  --layout-content-max-width: 1320px;
+  --layout-content-max-width: 1580px;
+  --layout-context-rail-width: 310px;
   --layout-mobile-gutter: 14px;
   --layout-bottom-nav-height: 64px;
   --layout-bottom-nav-offset: calc(var(--layout-bottom-nav-height) + env(safe-area-inset-bottom) + var(--space-3));

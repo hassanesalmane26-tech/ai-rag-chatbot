@@ -13,7 +13,7 @@ export default function Sidebar() {
   const [name, setName] = useState("");
   async function submit(event) { event.preventDefault(); if (!name.trim() || mutation) return; try { await createWorkspace(name.trim()); setName(""); setCreating(false); } catch { /* The Workspace selector exposes the recoverable request error. */ } }
   return <aside className="sidebar" aria-label="Navigation du Workspace">
-    <div className="sidebar-brand"><div className="brand-icon"><TridentMark /></div><div><h2>TRIDENT</h2><span>AI / WORKSPACE OS</span></div></div>
+    <div className="sidebar-brand"><div className="brand-icon"><TridentMark /></div><div><h2>TRIDENT AI</h2><span>AI OPERATING SYSTEM</span></div></div>
     <div className="sidebar-documents"><WorkspaceSelector /></div>
     <div className="sidebar-create">{creating ? <form onSubmit={submit}><input aria-label="Nom du nouveau Workspace" autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Nom du Workspace" disabled={Boolean(mutation)} /><button type="submit" disabled={Boolean(mutation)}>{mutation === "creating" ? "Création…" : "Créer"}</button></form> : <button onClick={() => setCreating(true)} disabled={Boolean(mutation)}><MessageSquarePlus size={16} /> Nouveau Workspace</button>}</div>
     <nav className="sidebar-menu" aria-label="Modules principaux">{workspaceModules.filter((item) => item.section === "primary").map(({ id, label, icon: Icon, mobile }) => <button key={id} className={`menu-item ds-nav-control ${mobile ? "menu-item--mobile" : ""} ${activeView === id ? "active" : ""}`} aria-current={activeView === id ? "page" : undefined} onClick={() => setActiveView(id)}><Icon size={17} />{label}</button>)}</nav>

@@ -38,7 +38,7 @@ test("mobile Workspace dialog supports modal and keyboard-close semantics", () =
   const selector = readFileSync(new URL("src/components/workspace/MobileWorkspaceSelector.jsx", root), "utf8");
   assert.match(selector, /role="dialog"/);
   assert.match(selector, /aria-modal="true"/);
-  assert.match(selector, /event\.key === "Escape"/);
+  assert.match(selector, /useModalFocus/);
 });
 
 test("entry failures are announced and controls use native buttons", () => {
@@ -51,11 +51,13 @@ test("entry failures are announced and controls use native buttons", () => {
 test("command and product onboarding dialogs are keyboard dismissable", () => {
   const command = readFileSync(new URL("src/components/command/CommandPalette.jsx", root), "utf8");
   const onboarding = readFileSync(new URL("src/features/onboarding/ProductOnboarding.jsx", root), "utf8");
+  const modalFocus = readFileSync(new URL("src/hooks/useModalFocus.js", root), "utf8");
   for (const surface of [command, onboarding]) {
     assert.match(surface, /role="dialog"/);
     assert.match(surface, /aria-modal="true"/);
-    assert.match(surface, /event\.key/);
+    assert.match(surface, /useModalFocus/);
   }
-  assert.match(command, /inputRef\.current\?\.focus/);
-  assert.match(onboarding, /closeRef\.current\?\.focus/);
+  assert.match(modalFocus, /event\.key === "Escape"/);
+  assert.match(modalFocus, /event\.key !== "Tab"/);
+  assert.match(modalFocus, /previousFocus/);
 });

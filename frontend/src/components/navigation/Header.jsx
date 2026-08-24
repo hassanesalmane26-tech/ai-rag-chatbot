@@ -20,7 +20,7 @@ export default function Header({
         <div className="logo"><TridentMark label="TRIDENT AI" /></div>
 
         <div>
-          <p className="topbar-breadcrumb">Workspace / {activeWorkspace?.name || "…"} / {currentModule.label}</p>
+          <p className="topbar-breadcrumb">TRIDENT / {activeWorkspace?.name || "…"} / {currentModule.label}</p>
           <h1>{currentModule.label}</h1>
         </div>
 
