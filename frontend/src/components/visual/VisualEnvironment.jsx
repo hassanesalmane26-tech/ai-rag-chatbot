@@ -13,7 +13,7 @@ export default function VisualEnvironment() {
       <div className="trident-orb trident-orb--electric" />
       <div className="trident-orb trident-orb--cyan" />
       <div className="trident-orb trident-orb--violet" />
-      <div className="trident-particles"><i /><i /><i /><i /><i /><i /><i /><i /></div>
+      <div className="trident-particles"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>
     </div>
   );
 }

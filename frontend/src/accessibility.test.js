@@ -34,6 +34,16 @@ test("current product navigation exposes Nova without Genesis presentation class
   assert.doesNotMatch(workspaceStyles, /\.genesis-/i);
 });
 
+test("mobile navigation is limited to four real modules and reserves its safe area", () => {
+  const registry = readFileSync(new URL("src/app/modules/registry.jsx", root), "utf8");
+  const sidebarStyles = readFileSync(new URL("src/styles/sidebar.css", root), "utf8");
+  const layoutStyles = readFileSync(new URL("src/styles/layout.css", root), "utf8");
+  assert.equal((registry.match(/mobile: true/g) || []).length, 4);
+  assert.match(sidebarStyles, /menu-item:not\(\.menu-item--mobile\)/);
+  assert.match(sidebarStyles, /env\(safe-area-inset-bottom\)/);
+  assert.match(layoutStyles, /scroll-padding-bottom:var\(--layout-bottom-nav-offset\)/);
+});
+
 test("mobile Workspace dialog supports modal and keyboard-close semantics", () => {
   const selector = readFileSync(new URL("src/components/workspace/MobileWorkspaceSelector.jsx", root), "utf8");
   assert.match(selector, /role="dialog"/);

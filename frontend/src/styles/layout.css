@@ -14,3 +14,21 @@
 .workspace { z-index:var(--z-content); }.workspace-container { max-width:var(--layout-content-max-width); }.search-box,.icon-btn,.profile-btn { min-height:var(--control-height-sm); }
 @media (max-width:760px) { .main-content { padding-bottom:calc(var(--layout-bottom-nav-offset) + var(--space-3)); }.workspace { padding-inline:var(--layout-mobile-gutter); }.topbar h1 { font-size:var(--font-size-meta); }.topbar p { font-size:9px; } }
 @media (max-width:760px) { .topbar p { max-width:190px; }.topbar-workspace-action { display:inline-grid; flex:0 0 auto; width:36px; height:36px; border-color:var(--border-emphasis); background:var(--surface-interactive); color:var(--cyan); box-shadow:var(--glow-cyan); } }
+
+/* Mobile application shell: the Workspace owns scrolling and the safe-area offset. */
+@media (max-width:760px) {
+  .main-layout { height:100dvh; min-height:100dvh; }
+  .main-content { height:100%; padding-bottom:0; overflow:hidden; }
+  .topbar { flex:0 0 auto; min-height:54px; padding:calc(6px + env(safe-area-inset-top)) var(--layout-mobile-gutter) 6px; }
+  .topbar-left { gap:8px; }
+  .topbar-left .logo { display:grid; width:32px; height:32px; }
+  .topbar-left .logo .trident-mark { transform:scale(.82); }
+  .topbar .topbar-breadcrumb { max-width:min(47vw,190px); }
+  .topbar h1 { margin-top:1px; font-size:11px; }
+  .topbar-command,.topbar-workspace-action { width:36px; min-width:36px; height:36px; }
+  .workspace { flex:1 1 auto; min-height:0; overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:contain; -webkit-overflow-scrolling:touch; padding:10px var(--layout-mobile-gutter) calc(var(--layout-bottom-nav-offset) + var(--space-4)); scroll-padding-bottom:var(--layout-bottom-nav-offset); }
+}
+@media (max-width:390px) {
+  .topbar-left .logo { display:none; }
+  .topbar .topbar-breadcrumb { max-width:48vw; }
+}

@@ -75,7 +75,7 @@
   --layout-content-max-width: 1580px;
   --layout-context-rail-width: 310px;
   --layout-mobile-gutter: 14px;
-  --layout-bottom-nav-height: 64px;
+  --layout-bottom-nav-height: 58px;
   --layout-bottom-nav-offset: calc(var(--layout-bottom-nav-height) + env(safe-area-inset-bottom) + var(--space-3));
   --control-height-sm: 42px;
   --control-height-md: 44px;
