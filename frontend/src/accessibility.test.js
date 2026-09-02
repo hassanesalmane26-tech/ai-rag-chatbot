@@ -55,6 +55,15 @@ test("the definitive shell uses real status and lightweight environmental layers
   assert.match(environmentStyles, /prefers-reduced-motion:reduce/);
 });
 
+test("tablet and landscape phone shells have explicit responsive strategies", () => {
+  const styles = readFileSync(new URL("src/styles/definitive.css", root), "utf8");
+  assert.match(styles, /min-width:761px\) and \(max-width:1024px\) and \(min-height:501px/);
+  assert.match(styles, /--layout-sidebar-width:82px/);
+  assert.match(styles, /orientation:landscape\) and \(max-width:950px\) and \(max-height:500px/);
+  assert.match(styles, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(styles, /env\(safe-area-inset-right\)/);
+});
+
 test("mobile Workspace dialog supports modal and keyboard-close semantics", () => {
   const selector = readFileSync(new URL("src/components/workspace/MobileWorkspaceSelector.jsx", root), "utf8");
   assert.match(selector, /role="dialog"/);

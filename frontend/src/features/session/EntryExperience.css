@@ -1,6 +1,7 @@
 .entry-experience { position: relative; min-height: 100vh; display: grid; place-items: center; overflow: hidden; padding: 24px; background: var(--ink-950); color: var(--color-text-primary); }
 .entry-panel { position:relative; z-index:2; overflow:hidden; width:min(620px,100%); padding:clamp(28px,6vw,56px); border-color:rgba(145,226,255,.3); background:linear-gradient(145deg,rgba(17,60,121,.6),rgba(5,24,60,.54)); text-align:center; }
-.entry-panel::before { content:""; position:absolute; z-index:-1; top:-230px; left:50%; width:480px; height:480px; border:1px solid rgba(139,231,255,.16); border-radius:50%; background:radial-gradient(circle,rgba(101,243,239,.17),rgba(91,140,255,.08) 38%,transparent 68%); transform:translateX(-50%); }
+.entry-panel::before { content:""; position:absolute; z-index:0; top:-230px; left:50%; width:480px; height:480px; border:1px solid rgba(139,231,255,.16); border-radius:50%; background:radial-gradient(circle,rgba(101,243,239,.17),rgba(91,140,255,.08) 38%,transparent 68%); transform:translateX(-50%); pointer-events:none; }
+.entry-panel>* { position:relative; z-index:1; }
 .entry-panel h1 { margin: 18px 0 10px; font-size: clamp(1.8rem, 5vw, 3rem); }
 .entry-panel p { color: var(--color-text-secondary); line-height: 1.6; }
 .entry-kicker { display: block; margin-top: 18px; color: var(--cyan); font-size: .72rem; letter-spacing: .2em; }
@@ -23,4 +24,18 @@
   .entry-organizations article div { display: grid; grid-template-columns: 1fr; }
   .entry-organizations button { width:100%; min-height:44px; padding:7px 12px; text-align:left; }
   .entry-logout { min-height:40px; font-size:.82rem; }
+}
+
+@media (orientation:landscape) and (max-width:950px) and (max-height:500px) {
+  .entry-experience { min-height:100dvh; place-items:center; overflow:auto; padding:max(8px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); }
+  .entry-panel { width:min(760px,100%); max-height:calc(100dvh - 16px); overflow:auto; padding:14px 18px; border-radius:18px; }
+  .entry-panel>.trident-mark { margin:auto; transform:scale(.78); }
+  .entry-kicker { margin-top:5px; font-size:.56rem; }
+  .entry-panel h1 { margin:6px auto 4px; font-size:clamp(1.35rem,4vw,1.8rem); }
+  .entry-panel p { font-size:.78rem; line-height:1.35; }
+  .entry-organizations { grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin:10px 0 6px; }
+  .entry-organizations article { padding:9px; }
+  .entry-organizations article div { gap:5px; margin-top:6px; }
+  .entry-organizations button { min-height:40px; padding:6px 10px; }
+  .entry-logout { min-height:36px; }
 }
