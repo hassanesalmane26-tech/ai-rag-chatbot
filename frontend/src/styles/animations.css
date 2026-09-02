@@ -24,3 +24,21 @@
 @keyframes trident-atmosphere { from { transform:translate3d(-1%,0,0) scale(1); opacity:.82; } to { transform:translate3d(1.5%,1%,0) scale(1.04); opacity:1; } }
 @media(max-width:760px){.trident-environment__world{opacity:.36}.trident-particles i{display:block;width:3px;height:3px;opacity:.48}.trident-particles i:nth-child(n+9){display:none}.trident-environment::before{animation:trident-atmosphere 30s ease-in-out infinite alternate}.trident-environment__beam--one{left:-35%;opacity:.18}.trident-environment__beam--two{right:-45%;opacity:.12}}
 @media(prefers-reduced-motion:reduce){.trident-environment::before,.trident-environment__orbit,.trident-environment__beam,.trident-orb,.trident-particles i{animation:none}.trident-environment__beam,.trident-particles i{will-change:auto}}
+
+/* Architectural depth: lightweight CSS structures, never the flattened reference image. */
+.trident-environment__vault { position:absolute; top:4%; bottom:8%; width:23vw; min-width:260px; opacity:.2; filter:drop-shadow(0 0 34px rgba(72,151,255,.26)); background:repeating-linear-gradient(90deg,transparent 0 31px,rgba(161,224,255,.13) 32px 33px,transparent 34px 66px); mask-image:linear-gradient(180deg,transparent,black 14%,black 76%,transparent 98%); }
+.trident-environment__vault::before,.trident-environment__vault::after { content:""; position:absolute; inset:0; border:1px solid rgba(147,221,255,.14); border-bottom:0; border-radius:50% 50% 0 0 / 24% 24% 0 0; box-shadow:inset 0 0 45px rgba(90,165,255,.07); }
+.trident-environment__vault::after { inset:13% 18% 0; border-color:rgba(117,203,255,.18); }
+.trident-environment__vault--left { left:-4%; transform:perspective(700px) rotateY(18deg); transform-origin:left center; }
+.trident-environment__vault--right { right:-4%; transform:perspective(700px) rotateY(-18deg); transform-origin:right center; }
+.trident-environment__portal { position:absolute; left:50%; top:23%; width:min(28vw,480px); aspect-ratio:1; border:1px solid rgba(127,219,255,.1); border-radius:50%; opacity:.62; transform:translateX(-50%); box-shadow:0 0 80px rgba(65,151,255,.1),inset 0 0 70px rgba(101,243,239,.035); animation:trident-portal 38s ease-in-out infinite alternate; }
+.trident-environment__portal::before,.trident-environment__portal::after,.trident-environment__portal i { content:""; position:absolute; inset:12%; border:1px solid rgba(141,222,255,.11); border-radius:50%; }
+.trident-environment__portal::after { inset:27%; border-color:rgba(176,124,255,.11); }
+.trident-environment__portal i:nth-child(1) { inset:4% 38%; border-radius:50%; transform:rotate(38deg); }
+.trident-environment__portal i:nth-child(2) { inset:38% 4%; border-radius:50%; transform:rotate(-20deg); }
+.trident-environment__portal i:nth-child(3) { inset:45%; border-color:rgba(101,243,239,.38); background:radial-gradient(circle,rgba(198,255,255,.48),rgba(70,178,255,.13) 32%,transparent 72%); box-shadow:0 0 34px rgba(101,243,239,.3); }
+.trident-environment__floor { position:absolute; right:-20%; bottom:-33%; left:-20%; height:62%; opacity:.33; background-image:linear-gradient(rgba(130,215,255,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(130,215,255,.12) 1px,transparent 1px); background-size:68px 46px; mask-image:radial-gradient(ellipse at 50% 20%,black,transparent 68%); transform:perspective(520px) rotateX(66deg); transform-origin:center top; }
+@keyframes trident-portal { from { translate:0 -1%; rotate:-1deg; opacity:.42; } to { translate:0 2%; rotate:1deg; opacity:.68; } }
+@media(max-width:1024px){.trident-environment__vault{width:30vw;opacity:.12}.trident-environment__portal{top:28%;width:46vw}.trident-environment__floor{opacity:.26}}
+@media(max-width:760px){.trident-environment__vault{display:block;top:10%;width:42vw;min-width:150px;opacity:.09}.trident-environment__portal{top:17%;width:88vw;opacity:.42}.trident-environment__floor{bottom:-20%;height:50%;background-size:48px 38px;opacity:.23}}
+@media(prefers-reduced-motion:reduce){.trident-environment__portal{animation:none}}

@@ -44,6 +44,17 @@ test("mobile navigation is limited to four real modules and reserves its safe ar
   assert.match(layoutStyles, /scroll-padding-bottom:var\(--layout-bottom-nav-offset\)/);
 });
 
+test("the definitive shell uses real status and lightweight environmental layers", () => {
+  const home = readFileSync(new URL("src/features/home/WorkspaceHome.jsx", root), "utf8");
+  const environment = readFileSync(new URL("src/components/visual/VisualEnvironment.jsx", root), "utf8");
+  const environmentStyles = readFileSync(new URL("src/styles/animations.css", root), "utf8");
+  assert.match(home, /overviewState === "ready"/);
+  assert.doesNotMatch(home, /Contexte serveur actif/);
+  assert.match(environment, /trident-environment__portal/);
+  assert.match(environment, /trident-environment__floor/);
+  assert.match(environmentStyles, /prefers-reduced-motion:reduce/);
+});
+
 test("mobile Workspace dialog supports modal and keyboard-close semantics", () => {
   const selector = readFileSync(new URL("src/components/workspace/MobileWorkspaceSelector.jsx", root), "utf8");
   assert.match(selector, /role="dialog"/);

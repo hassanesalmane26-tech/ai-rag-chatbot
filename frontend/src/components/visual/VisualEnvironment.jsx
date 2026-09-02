@@ -4,8 +4,12 @@ export default function VisualEnvironment() {
       <div className="trident-environment__grid" />
       <div className="trident-environment__architecture trident-environment__architecture--left" />
       <div className="trident-environment__architecture trident-environment__architecture--right" />
+      <div className="trident-environment__vault trident-environment__vault--left" />
+      <div className="trident-environment__vault trident-environment__vault--right" />
       <div className="trident-environment__horizon" />
       <div className="trident-environment__world" />
+      <div className="trident-environment__portal"><i /><i /><i /></div>
+      <div className="trident-environment__floor" />
       <div className="trident-environment__orbit trident-environment__orbit--one" />
       <div className="trident-environment__orbit trident-environment__orbit--two" />
       <div className="trident-environment__beam trident-environment__beam--one" />
