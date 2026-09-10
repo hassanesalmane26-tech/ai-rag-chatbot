@@ -11,6 +11,7 @@
 .entry-organizations article div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .entry-organizations button { min-height: 44px; padding: 9px 14px; border: 1px solid var(--border-default); border-radius: var(--radius-md); color: var(--color-text-primary); background: var(--surface-interactive); cursor: pointer; }
 .entry-logout { min-height: 44px; border: 0; color: var(--color-text-secondary); background: transparent; cursor: pointer; }
+.entry-attribution { display:flex; justify-content:center; gap:8px; margin-top:18px; padding-top:12px; border-top:1px solid rgba(145,226,255,.11); color:var(--text-dim); font-size:9px; letter-spacing:.06em; }.entry-attribution small { color:var(--cyan); font-size:inherit; text-transform:uppercase; }
 @media (max-width: 560px) {
   .entry-experience { min-height:100dvh; overflow:auto; padding:calc(12px + env(safe-area-inset-top)) 14px calc(12px + env(safe-area-inset-bottom)); }
   .entry-panel { width:min(430px,100%); padding:20px 16px 16px; border-radius:22px; }
@@ -24,6 +25,7 @@
   .entry-organizations article div { display: grid; grid-template-columns: 1fr; }
   .entry-organizations button { width:100%; min-height:44px; padding:6px 11px; border-color:rgba(139,231,255,.16); background:rgba(8,35,78,.52); text-align:left; }
   .entry-logout { min-height:44px; padding:0 10px; font-size:.74rem; }
+  .entry-attribution { margin-top:10px; padding-top:8px; font-size:8px; }
 }
 
 @media (orientation:landscape) and (max-width:950px) and (max-height:500px) {

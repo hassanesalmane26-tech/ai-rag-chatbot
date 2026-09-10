@@ -27,6 +27,10 @@
   --surface-interactive: rgba(255, 255, 255, 0.075);
   --surface-selected: rgba(91, 140, 255, 0.16);
   --surface-overlay: rgba(8, 23, 53, 0.3);
+  --glass-structural: rgba(5, 20, 50, 0.56);
+  --glass-content: rgba(10, 34, 76, 0.42);
+  --glass-interactive: rgba(18, 57, 116, 0.48);
+  --glass-active: rgba(22, 73, 145, 0.56);
   --border-subtle: rgba(196, 230, 255, 0.13);
   --border-default: rgba(110, 221, 255, 0.3);
   --border-emphasis: rgba(139, 231, 255, 0.46);

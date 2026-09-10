@@ -46,9 +46,13 @@ test("mobile navigation is limited to four real modules and reserves its safe ar
 
 test("the definitive shell uses real status and lightweight environmental layers", () => {
   const home = readFileSync(new URL("src/features/home/WorkspaceHome.jsx", root), "utf8");
+  const nova = readFileSync(new URL("src/features/chat/ConversationsView.jsx", root), "utf8");
   const environment = readFileSync(new URL("src/components/visual/VisualEnvironment.jsx", root), "utf8");
   const environmentStyles = readFileSync(new URL("src/styles/animations.css", root), "utf8");
   assert.match(home, /overviewState === "ready"/);
+  assert.match(home, /workspace-core__field/);
+  assert.match(nova, /nova-ready/);
+  assert.match(nova, /activeWorkspace\?\.name/);
   assert.doesNotMatch(home, /Contexte serveur actif/);
   assert.match(environment, /trident-environment__portal/);
   assert.match(environment, /trident-environment__floor/);
@@ -76,6 +80,8 @@ test("entry failures are announced and controls use native buttons", () => {
   assert.match(entry, /role="alert"/);
   assert.match(entry, /type="button"/);
   assert.match(entry, /Connexion sécurisée à votre Workspace\./);
+  assert.match(entry, /Created by Salmane Hassan/);
+  assert.match(entry, /A TRIDENT Project/);
   assert.doesNotMatch(entry, /Authorization Code|PKCE/);
   assert.doesNotMatch(entry, /onClick=\{[^}]+\}[^>]*role="button"/);
 });
@@ -89,6 +95,7 @@ test("command and product onboarding dialogs are keyboard dismissable", () => {
     assert.match(surface, /aria-modal="true"/);
     assert.match(surface, /useModalFocus/);
   }
+  assert.match(command, /Workspace actif · \{activeWorkspace\?\.name/);
   assert.match(modalFocus, /event\.key === "Escape"/);
   assert.match(modalFocus, /event\.key !== "Tab"/);
   assert.match(modalFocus, /previousFocus/);
