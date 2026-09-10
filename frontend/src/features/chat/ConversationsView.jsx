@@ -7,15 +7,22 @@ import TridentMark from "../../components/visual/TridentMark";
 
 export default function ConversationsView({ workspaceId }) {
   const [text, setText] = useState("");
-  const { activeWorkspace, novaConversationRequest } = useWorkspaceContext();
+  const { activeWorkspace, novaConversationRequest, novaConversationTarget } = useWorkspaceContext();
   const { conversations, activeConversation, error, loading, creating, isSending, refresh, selectConversation, addConversation, sendMessage } = useWorkspaceConversations(workspaceId);
   const handledNovaRequest = useRef(0);
+  const handledNovaTarget = useRef(0);
 
   useEffect(() => {
     if (!novaConversationRequest || novaConversationRequest === handledNovaRequest.current) return;
     handledNovaRequest.current = novaConversationRequest;
     addConversation();
   }, [novaConversationRequest, addConversation]);
+
+  useEffect(() => {
+    if (!novaConversationTarget || novaConversationTarget.request === handledNovaTarget.current) return;
+    handledNovaTarget.current = novaConversationTarget.request;
+    selectConversation(novaConversationTarget.conversation);
+  }, [novaConversationTarget, selectConversation]);
 
   async function submit(event) {
     event.preventDefault();

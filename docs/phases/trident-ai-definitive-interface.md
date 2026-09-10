@@ -15,11 +15,14 @@ boundaries, APIs, and business behavior.
 - Product entry: an authorized Workspace opens Nova first; Overview remains
   available as a secondary module through the system navigation.
 - Mobile: a compact header and focus-managed system drawer expose every real
-  module and Workspace controls. The persistent module bottom bar is removed so
-  the safe-area bottom edge belongs to Nova's always-available composer.
+  module, the five most recent server-returned conversations and Workspace
+  controls. Selecting a conversation delegates to the existing Nova detail
+  loader. The persistent module bottom bar is removed so the safe-area bottom
+  edge belongs to Nova's always-available composer.
 - Visual environment: CSS-generated stars, mist, a distant moon, atmospheric
-  depth, light structures, horizons, orbits, glows, and bounded particles; the
-  canonical reference image is never imported by the runtime.
+  depth, cloud banks, a celestial sanctuary silhouette, a central light axis,
+  horizons, orbits, glows, and bounded particles; the canonical reference image
+  is never imported by the runtime.
 - Accessibility: command, Workspace, and onboarding dialogs share focus
   containment, Escape handling, initial focus, and focus restoration.
 

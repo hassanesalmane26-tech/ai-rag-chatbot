@@ -222,7 +222,9 @@ secondary module. Phones use a focus-managed system menu instead of a competing
 persistent bottom module bar, while tablet and desktop retain the integrated
 system rail. The shared CSS environment now composes stars, atmospheric mist,
 a distant celestial body, architectural depth, horizon, portal, light beams and
-bounded particles without importing the canonical image at runtime.
+bounded particles without importing the canonical image at runtime. The mobile
+system drawer includes only real modules, authorized Workspaces and up to five
+real conversations returned by the existing Workspace API.
 
 The Nova composer remains inside the authorized Workspace boundary and creates
 a real conversation before sending the first message. No attachment, voice,

@@ -38,19 +38,24 @@ export function WorkspaceProvider({ children }) {
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState(null);
   const [activeView, setActiveView] = useState("conversations");
   const [novaConversationRequest, setNovaConversationRequest] = useState(0);
+  const [novaConversationTarget, setNovaConversationTarget] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mutation, setMutation] = useState(null);
   const activeWorkspaceIdRef = useRef(null);
   const persistedWorkspaceIdRef = useRef(readPersistedWorkspaceId());
   const refreshVersionRef = useRef(0);
+  const novaTargetSequenceRef = useRef(0);
 
   const selectWorkspace = useCallback((workspaceId, availableWorkspaces = workspaces) => {
     const selected = availableWorkspaces.find((workspace) => workspace.id === workspaceId) || null;
     const nextId = selected?.id ?? null;
     activeWorkspaceIdRef.current = nextId;
     setActiveWorkspaceIdState(nextId);
-    if (nextId) setActiveView("conversations");
+    if (nextId) {
+      setActiveView("conversations");
+      setNovaConversationTarget(null);
+    }
     persistWorkspaceId(nextId);
     return selected;
   }, [workspaces]);
@@ -128,7 +133,17 @@ export function WorkspaceProvider({ children }) {
   );
   const requestNovaConversation = useCallback(() => {
     setActiveView("conversations");
+    setNovaConversationTarget(null);
     setNovaConversationRequest((current) => current + 1);
+  }, []);
+  const openNovaConversation = useCallback((conversation) => {
+    if (!conversation?.id) return;
+    setActiveView("conversations");
+    novaTargetSequenceRef.current += 1;
+    setNovaConversationTarget({
+      conversation,
+      request: novaTargetSequenceRef.current,
+    });
   }, []);
   const state = loading ? (workspaces.length ? "loading" : "boot") : error ? "error" : activeWorkspace ? "ready" : "empty";
   const value = useMemo(() => ({
@@ -137,17 +152,19 @@ export function WorkspaceProvider({ children }) {
     activeWorkspaceId,
     activeView,
     novaConversationRequest,
+    novaConversationTarget,
     loading,
     error,
     mutation,
     state,
     setActiveView,
     requestNovaConversation,
+    openNovaConversation,
     selectWorkspace,
     createWorkspace,
     updateWorkspace,
     refreshWorkspaces,
-  }), [workspaces, activeWorkspace, activeWorkspaceId, activeView, novaConversationRequest, loading, error, mutation, state, selectWorkspace, createWorkspace, updateWorkspace, refreshWorkspaces, requestNovaConversation]);
+  }), [workspaces, activeWorkspace, activeWorkspaceId, activeView, novaConversationRequest, novaConversationTarget, loading, error, mutation, state, selectWorkspace, createWorkspace, updateWorkspace, refreshWorkspaces, requestNovaConversation, openNovaConversation]);
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }

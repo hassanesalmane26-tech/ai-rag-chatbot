@@ -3,6 +3,7 @@ export default function VisualEnvironment() {
     <div className="trident-environment" aria-hidden="true">
       <div className="trident-environment__stars" />
       <div className="trident-environment__moon" />
+      <div className="trident-environment__clouds trident-environment__clouds--high"><i /><i /><i /></div>
       <div className="trident-environment__mist trident-environment__mist--near" />
       <div className="trident-environment__mist trident-environment__mist--far" />
       <div className="trident-environment__grid" />
@@ -11,6 +12,8 @@ export default function VisualEnvironment() {
       <div className="trident-environment__vault trident-environment__vault--left" />
       <div className="trident-environment__vault trident-environment__vault--right" />
       <div className="trident-environment__horizon" />
+      <div className="trident-environment__sanctuary"><i /><i /><i /><i /><i /><i /><i /></div>
+      <div className="trident-environment__axis" />
       <div className="trident-environment__world" />
       <div className="trident-environment__portal"><i /><i /><i /></div>
       <div className="trident-environment__floor" />

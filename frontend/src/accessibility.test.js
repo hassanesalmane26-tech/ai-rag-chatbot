@@ -43,6 +43,8 @@ test("mobile navigation uses the accessible system menu and leaves the bottom ed
   assert.match(context, /useState\("conversations"\)/);
   assert.match(menu, /workspaceModules\.map/);
   assert.match(menu, /requestNovaConversation/);
+  assert.match(menu, /listConversations\(activeWorkspaceId\)/);
+  assert.match(menu, /openNovaConversation\(conversation\)/);
   assert.match(menu, /role="dialog"/);
   assert.match(menu, /aria-current=/);
   assert.match(definitiveStyles, /\.sidebar \{ display:none; \}/);
@@ -63,6 +65,8 @@ test("the definitive shell uses real status and lightweight environmental layers
   assert.match(environment, /trident-environment__portal/);
   assert.match(environment, /trident-environment__stars/);
   assert.match(environment, /trident-environment__mist/);
+  assert.match(environment, /trident-environment__sanctuary/);
+  assert.match(environment, /trident-environment__axis/);
   assert.match(environment, /trident-environment__floor/);
   assert.match(environmentStyles, /prefers-reduced-motion:reduce/);
 });
