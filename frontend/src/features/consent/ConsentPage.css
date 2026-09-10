@@ -8,9 +8,8 @@
   color: var(--text);
   background:
     linear-gradient(135deg, transparent 18%, rgba(101, 243, 239, .035) 18.2%, transparent 18.5% 76%, rgba(91, 140, 255, .04) 76.2%, transparent 76.5%),
-    radial-gradient(circle at 50% 8%, rgba(91, 140, 255, .25), transparent 43%),
-    radial-gradient(circle at 85% 65%, rgba(101, 243, 239, .08), transparent 35%),
-    var(--ink-950);
+    radial-gradient(circle at 50% 8%, rgba(91, 140, 255, .12), transparent 43%),
+    radial-gradient(circle at 85% 65%, rgba(101, 243, 239, .05), transparent 35%);
 }
 
 .consent-shell::before {

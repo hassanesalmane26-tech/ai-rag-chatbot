@@ -34,14 +34,18 @@ test("current product navigation exposes Nova without Genesis presentation class
   assert.doesNotMatch(workspaceStyles, /\.genesis-/i);
 });
 
-test("mobile navigation is limited to four real modules and reserves its safe area", () => {
+test("mobile navigation uses the accessible system menu and leaves the bottom edge to Nova", () => {
   const registry = readFileSync(new URL("src/app/modules/registry.jsx", root), "utf8");
-  const sidebarStyles = readFileSync(new URL("src/styles/sidebar.css", root), "utf8");
-  const layoutStyles = readFileSync(new URL("src/styles/layout.css", root), "utf8");
+  const context = readFileSync(new URL("src/context/WorkspaceContext.jsx", root), "utf8");
+  const menu = readFileSync(new URL("src/components/workspace/MobileWorkspaceSelector.jsx", root), "utf8");
+  const definitiveStyles = readFileSync(new URL("src/styles/definitive.css", root), "utf8");
   assert.equal((registry.match(/mobile: true/g) || []).length, 4);
-  assert.match(sidebarStyles, /menu-item:not\(\.menu-item--mobile\)/);
-  assert.match(sidebarStyles, /env\(safe-area-inset-bottom\)/);
-  assert.match(layoutStyles, /scroll-padding-bottom:calc\(var\(--layout-bottom-nav-offset\) \+ var\(--space-3\)\)/);
+  assert.match(context, /useState\("conversations"\)/);
+  assert.match(menu, /workspaceModules\.map/);
+  assert.match(menu, /requestNovaConversation/);
+  assert.match(menu, /role="dialog"/);
+  assert.match(menu, /aria-current=/);
+  assert.match(definitiveStyles, /\.sidebar \{ display:none; \}/);
 });
 
 test("the definitive shell uses real status and lightweight environmental layers", () => {
@@ -52,9 +56,13 @@ test("the definitive shell uses real status and lightweight environmental layers
   assert.match(home, /overviewState === "ready"/);
   assert.match(home, /workspace-core__field/);
   assert.match(nova, /nova-ready/);
+  assert.match(nova, /message-composer/);
+  assert.match(nova, /nova-ready__suggestions/);
   assert.match(nova, /activeWorkspace\?\.name/);
   assert.doesNotMatch(home, /Contexte serveur actif/);
   assert.match(environment, /trident-environment__portal/);
+  assert.match(environment, /trident-environment__stars/);
+  assert.match(environment, /trident-environment__mist/);
   assert.match(environment, /trident-environment__floor/);
   assert.match(environmentStyles, /prefers-reduced-motion:reduce/);
 });

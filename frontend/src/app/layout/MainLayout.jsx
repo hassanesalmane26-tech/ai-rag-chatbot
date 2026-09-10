@@ -5,6 +5,7 @@ import MobileWorkspaceSelector from "../../components/workspace/MobileWorkspaceS
 import CommandPalette from "../../components/command/CommandPalette";
 import ProductOnboarding from "../../features/onboarding/ProductOnboarding";
 import useSessionContext from "../../hooks/useSessionContext";
+import useWorkspaceContext from "../../hooks/useWorkspaceContext";
 import { useCallback, useEffect, useState } from "react";
 import "./MainLayout.css";
 
@@ -12,6 +13,7 @@ export default function MainLayout({ children }) {
   const [isWorkspaceSelectorOpen, setWorkspaceSelectorOpen] = useState(false);
   const [isCommandOpen, setCommandOpen] = useState(false);
   const { session } = useSessionContext();
+  const { activeView } = useWorkspaceContext();
   const onboardingKey = `trident.ai.product_onboarding.${session?.user?.id || "anonymous"}`;
   const [isOnboardingOpen, setOnboardingOpen] = useState(false);
   useEffect(() => {
@@ -27,7 +29,7 @@ export default function MainLayout({ children }) {
     return () => window.removeEventListener("keydown", openCommand);
   }, []);
   return (
-    <div className="main-layout">
+    <div className={`main-layout ${activeView === "conversations" ? "main-layout--nova" : ""}`}>
       <VisualEnvironment />
       <Sidebar />
 

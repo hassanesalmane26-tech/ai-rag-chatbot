@@ -12,11 +12,14 @@ boundaries, APIs, and business behavior.
   secondary context rail using real overview and sanitized activity data.
 - Laptop and tablet: the context rail reflows into the main document instead of
   squeezing a three-column composition.
-- Mobile: the established compact header, four-module bottom navigation,
-  Workspace sheet, and TRIDENT Command remain the responsive shell.
-- Visual environment: CSS-generated atmospheric depth, light structures,
-  horizons, orbits, glows, and bounded particles; the 2.6 MB canonical reference
-  image is never imported by the runtime.
+- Product entry: an authorized Workspace opens Nova first; Overview remains
+  available as a secondary module through the system navigation.
+- Mobile: a compact header and focus-managed system drawer expose every real
+  module and Workspace controls. The persistent module bottom bar is removed so
+  the safe-area bottom edge belongs to Nova's always-available composer.
+- Visual environment: CSS-generated stars, mist, a distant moon, atmospheric
+  depth, light structures, horizons, orbits, glows, and bounded particles; the
+  canonical reference image is never imported by the runtime.
 - Accessibility: command, Workspace, and onboarding dialogs share focus
   containment, Escape handling, initial focus, and focus restoration.
 
@@ -35,5 +38,9 @@ Founder isolation, and database-authoritative tenant checks remain unchanged.
 
 The responsive rules explicitly cover portrait mobile below 768 px, low-height
 landscape phones through 950 px, compact-rail tablets from 768 through 1024 px,
-standard desktop/laptop through 1439 px, and the contextual three-zone shell at
-1440 px and above. Physical-device acceptance remains an owner review activity.
+standard desktop/laptop through 1439 px, and the contextual large-screen shell
+at 1440 px and above. Mobile Nova owns an internal message scroller and a
+safe-area-aware composer; drawers and command surfaces are bounded by `100dvh`.
+Decorative motion is CSS-only, low-amplitude and reduced-motion aware. Physical
+device keyboard behavior, Safari dynamic viewport transitions and final visual
+acceptance remain founder review activities.

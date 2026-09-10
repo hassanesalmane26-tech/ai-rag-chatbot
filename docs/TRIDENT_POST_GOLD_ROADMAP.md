@@ -215,12 +215,24 @@ subsequent TRIDENT AI functional completion are validated.
 Implementation status: **rework implemented on the `trident-ai` development
 branch; pending founder visual validation**.
 
-The rework preserves the Gold application architecture and evolves
-the approved spatial shell, a large-desktop contextual intelligence rail backed
-by real Workspace state, a responsive collapse strategy, an evolved living
-environment, and hardened modal focus behavior. The canonical image remains a
-directional reference: unsupported agents, automations, projects, telemetry,
-capacity figures, and notifications were intentionally not reproduced.
+The rework preserves the Gold application architecture and evolves the approved
+spatial shell into a Nova-first Workspace experience. Authenticated entry opens
+Nova as the primary interaction surface; Workspace Overview remains a real
+secondary module. Phones use a focus-managed system menu instead of a competing
+persistent bottom module bar, while tablet and desktop retain the integrated
+system rail. The shared CSS environment now composes stars, atmospheric mist,
+a distant celestial body, architectural depth, horizon, portal, light beams and
+bounded particles without importing the canonical image at runtime.
+
+The Nova composer remains inside the authorized Workspace boundary and creates
+a real conversation before sending the first message. No attachment, voice,
+model or tool control is displayed because those chat capabilities are not
+currently implemented. Animations use transform and opacity, become sparser on
+phones, and stop under `prefers-reduced-motion`. Remaining risks are physical
+iPhone keyboard/viewport behavior and final visual judgment across display
+calibration. The canonical image remains directional: unsupported agents,
+automations, projects, telemetry, capacity figures, and notifications were
+intentionally not reproduced.
 
 This milestone must not be marked complete until founder visual acceptance.
 The next product step begins only after that acceptance and remains **TRIDENT

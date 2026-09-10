@@ -1,6 +1,10 @@
 export default function VisualEnvironment() {
   return (
     <div className="trident-environment" aria-hidden="true">
+      <div className="trident-environment__stars" />
+      <div className="trident-environment__moon" />
+      <div className="trident-environment__mist trident-environment__mist--near" />
+      <div className="trident-environment__mist trident-environment__mist--far" />
       <div className="trident-environment__grid" />
       <div className="trident-environment__architecture trident-environment__architecture--left" />
       <div className="trident-environment__architecture trident-environment__architecture--right" />

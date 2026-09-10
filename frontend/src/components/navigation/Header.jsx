@@ -1,6 +1,6 @@
 import {
   CircleUserRound,
-  PanelsTopLeft,
+  Menu,
   Search,
 } from "lucide-react";
 import TridentMark from "../visual/TridentMark";
@@ -24,12 +24,13 @@ export default function Header({
           <h1>{currentModule.label}</h1>
         </div>
 
-        <IconButton className="topbar-workspace-action" aria-label="Ouvrir les Workspaces" title="Workspaces" onClick={onOpenWorkspaces}>
-          <PanelsTopLeft size={18} />
-        </IconButton>
       </div>
 
       <button className="topbar-command" type="button" onClick={onOpenCommand} aria-label="Ouvrir TRIDENT Command"><Search size={17} /><span>Rechercher ou demander à TRIDENT…</span><kbd>⌘ K</kbd></button>
+
+      <IconButton className="topbar-workspace-action" aria-label="Ouvrir le menu système TRIDENT" title="Menu TRIDENT" onClick={onOpenWorkspaces}>
+        <Menu size={19} />
+      </IconButton>
 
       <div className="topbar-right">
         <span className="workspace-status"><i /> Workspace actif</span>

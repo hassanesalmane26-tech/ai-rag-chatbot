@@ -5,6 +5,7 @@ import {
   safeAuthorizationRedirect,
 } from "./consentState";
 import { consentClient } from "./supabaseClient";
+import VisualEnvironment from "../../components/visual/VisualEnvironment";
 import "./ConsentPage.css";
 
 export default function ConsentPage() {
@@ -196,6 +197,7 @@ export default function ConsentPage() {
 
   return (
     <main className="consent-shell">
+      <VisualEnvironment />
       <section className="consent-card" aria-live="polite">
         <div className="consent-mark" aria-hidden="true">
           ♆

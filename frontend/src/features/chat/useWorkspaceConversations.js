@@ -60,6 +60,7 @@ export default function useWorkspaceConversations(workspaceId) {
       if (request !== detailRequestRef.current || !acceptsWorkspaceResult(workspaceRef.current, workspaceId)) return;
       setActiveConversation(detail);
       setError("");
+      return detail;
     } catch (err) {
       if (request === detailRequestRef.current && workspaceRef.current === workspaceId) setError(err.message);
     }
@@ -77,16 +78,17 @@ export default function useWorkspaceConversations(workspaceId) {
   }, [workspaceId, refresh]);
 
   const addConversation = useCallback(async () => {
-    if (!workspaceId || creating) return;
+    if (!workspaceId || creating) return null;
     setCreating(true);
     setError("");
     try {
       const created = await createConversation(workspaceId);
       if (!acceptsWorkspaceResult(workspaceRef.current, workspaceId)) return;
       setConversations((items) => [created, ...items]);
-      await selectConversation(created);
+      return await selectConversation(created);
     } catch (err) {
       if (acceptsWorkspaceResult(workspaceRef.current, workspaceId)) setError(err.message);
+      return null;
     } finally {
       if (acceptsWorkspaceResult(workspaceRef.current, workspaceId)) setCreating(false);
     }
