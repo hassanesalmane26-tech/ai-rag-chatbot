@@ -4,13 +4,23 @@ import useWorkspaceConversations from "./useWorkspaceConversations";
 import { uniqueDocumentCitations } from "./chatConversationState";
 import useWorkspaceContext from "../../hooks/useWorkspaceContext";
 import TridentMark from "../../components/visual/TridentMark";
+import NovaContextRail from "./NovaContextRail";
 
 export default function ConversationsView({ workspaceId }) {
   const [text, setText] = useState("");
+  const [showContextRail, setShowContextRail] = useState(false);
   const { activeWorkspace, novaConversationRequest, novaConversationTarget, setNovaActiveConversationId } = useWorkspaceContext();
   const { conversations, activeConversation, error, loading, creating, isSending, refresh, selectConversation, addConversation, sendMessage } = useWorkspaceConversations(workspaceId);
   const handledNovaRequest = useRef(0);
   const handledNovaTarget = useRef(0);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1440px)");
+    const synchronize = () => setShowContextRail(media.matches);
+    synchronize();
+    media.addEventListener("change", synchronize);
+    return () => media.removeEventListener("change", synchronize);
+  }, []);
 
   useEffect(() => {
     if (!novaConversationRequest || novaConversationRequest === handledNovaRequest.current) return;
@@ -53,5 +63,6 @@ export default function ConversationsView({ workspaceId }) {
       </> : <div className="nova-ready"><div className="nova-ready__field" aria-hidden="true"><i /><i /><i /></div><div className="nova-ready__identity"><div className="nova-ready__core"><i /><i /><i /><TridentMark /></div><span>NOVA · INTELLIGENCE DU WORKSPACE</span><h2>Bienvenue dans {activeWorkspace?.name || "votre Workspace"}</h2><p>Nova est prête à travailler avec le contexte autorisé de cet environnement.</p></div><div className="nova-ready__context" role="list" aria-label="Systèmes de contexte disponibles dans le Workspace"><span role="listitem"><BookOpen size={16} />Knowledge</span><span role="listitem"><Brain size={16} />Memory</span><span role="listitem"><Files size={16} />Fichiers</span></div><div className="nova-ready__suggestions" aria-label="Suggestions"><button type="button" onClick={() => setText("Que peux-tu m’aider à accomplir dans ce Workspace ?")}><span>Explorer ce Workspace</span><ArrowUpRight size={14} /></button><button type="button" onClick={() => setText("Résume le contexte disponible dans Knowledge.")}><span>Interroger Knowledge</span><ArrowUpRight size={14} /></button><button type="button" onClick={() => setText("Démarrons une nouvelle conversation.")}><span>Parler avec Nova</span><ArrowUpRight size={14} /></button></div>{error && <p className="inline-error" role="alert">{error}</p>}</div>}
       <form className="message-composer" onSubmit={submit}><span className="message-composer__mark" aria-hidden="true"><TridentMark /></span><input aria-label="Message à Nova" value={text} onChange={(event) => setText(event.target.value)} placeholder="Demandez à Nova…" disabled={isSending || creating} /><button type="submit" aria-label="Envoyer le message" disabled={isSending || creating || !text.trim()}>{creating || isSending ? <LoaderCircle className="spin" size={18} /> : <Send size={18} />}</button></form>
     </section>
+    {showContextRail && <NovaContextRail workspace={activeWorkspace} workspaceId={workspaceId} />}
   </section>;
 }

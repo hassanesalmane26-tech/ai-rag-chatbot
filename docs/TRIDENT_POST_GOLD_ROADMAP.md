@@ -228,7 +228,9 @@ real conversations returned by the existing Workspace API. The latest celestial
 composition adds a layered constellation field, two atmospheric cloud depths,
 a distant sanctuary, foreground architecture and a luminous perspective axis.
 Nova owns a dedicated orbital Core, signature composer and reduced-chrome
-conversation language while retaining the existing conversation lifecycle.
+conversation language while retaining the existing conversation lifecycle. On
+large screens, Nova gains a real-data contextual rail backed by the existing
+overview and activity endpoints; it is not mounted on narrower displays.
 
 The Nova composer remains inside the authorized Workspace boundary and creates
 a real conversation before sending the first message. No attachment, voice,

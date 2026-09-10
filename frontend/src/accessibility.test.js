@@ -74,6 +74,8 @@ test("the definitive shell uses real status and lightweight environmental layers
   assert.match(environment, /trident-environment__constellations/);
   assert.match(environment, /trident-environment__foreground/);
   assert.match(nova, /nova-ready__core/);
+  assert.match(nova, /NovaContextRail/);
+  assert.match(nova, /matchMedia\("\(min-width: 1440px\)"\)/);
   assert.match(environmentStyles, /prefers-reduced-motion:reduce/);
   assert.match(environmentStyles, /trident-environment__clouds--low/);
 });

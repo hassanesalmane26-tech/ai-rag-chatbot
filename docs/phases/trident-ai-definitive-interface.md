@@ -28,6 +28,10 @@ boundaries, APIs, and business behavior.
   contextual prompts remain real input shortcuts, the signature composer keeps
   the existing send lifecycle, and active conversations reduce environmental
   contrast instead of removing the shared world.
+- Large-screen Nova: at 1440 px and above, a conditionally mounted context rail
+  presents only server-returned overview counts and sanitized recent activity.
+  It remains unmounted below that breakpoint, avoiding decorative mobile API
+  traffic and preserving the central Nova surface.
 - Accessibility: command, Workspace, and onboarding dialogs share focus
   containment, Escape handling, initial focus, and focus restoration.
 
