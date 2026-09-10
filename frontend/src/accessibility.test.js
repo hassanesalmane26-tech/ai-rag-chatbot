@@ -75,6 +75,8 @@ test("entry failures are announced and controls use native buttons", () => {
   const entry = readFileSync(new URL("src/features/session/EntryExperience.jsx", root), "utf8");
   assert.match(entry, /role="alert"/);
   assert.match(entry, /type="button"/);
+  assert.match(entry, /Connexion sécurisée à votre Workspace\./);
+  assert.doesNotMatch(entry, /Authorization Code|PKCE/);
   assert.doesNotMatch(entry, /onClick=\{[^}]+\}[^>]*role="button"/);
 });
 
