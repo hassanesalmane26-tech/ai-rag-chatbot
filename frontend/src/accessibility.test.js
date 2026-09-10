@@ -13,11 +13,14 @@ test("document metadata identifies the French TRIDENT AI entry", () => {
 
 test("Workspace shell retains landmark and current-page semantics", () => {
   const layout = readFileSync(new URL("src/app/layout/MainLayout.jsx", root), "utf8");
+  const header = readFileSync(new URL("src/components/navigation/Header.jsx", root), "utf8");
   const sidebar = readFileSync(new URL("src/components/Sidebar.jsx", root), "utf8");
   assert.match(layout, /<main className="main-content">/);
   assert.match(sidebar, /<aside[^>]+aria-label=/);
   assert.match(sidebar, /<nav className=/);
   assert.match(sidebar, /aria-current=/);
+  assert.match(header, /aria-expanded=\{isWorkspaceSelectorOpen\}/);
+  assert.match(header, /aria-expanded=\{isCommandOpen\}/);
 });
 
 test("current product navigation exposes Nova without Genesis presentation classes", () => {
@@ -90,6 +93,7 @@ test("tablet and landscape phone shells have explicit responsive strategies", ()
   assert.match(styles, /env\(safe-area-inset-right\)/);
   assert.match(celestialStyles, /orientation:landscape/);
   assert.match(celestialStyles, /\.sidebar \{ display:none; \}/);
+  assert.match(celestialStyles, /main-layout--nova \.conversation-list \{ display:none; \}/);
   assert.match(celestialStyles, /min-width:1440px/);
   assert.match(celestialStyles, /prefers-reduced-motion:reduce/);
 });

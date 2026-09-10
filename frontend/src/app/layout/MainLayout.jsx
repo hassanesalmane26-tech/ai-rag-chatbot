@@ -34,7 +34,7 @@ export default function MainLayout({ children }) {
       <Sidebar />
 
       <main className="main-content">
-        <Header onOpenWorkspaces={() => setWorkspaceSelectorOpen(true)} onOpenCommand={() => setCommandOpen(true)} />
+        <Header isWorkspaceSelectorOpen={isWorkspaceSelectorOpen} isCommandOpen={isCommandOpen} onOpenWorkspaces={() => setWorkspaceSelectorOpen(true)} onOpenCommand={() => setCommandOpen(true)} />
         {children}
       </main>
       <MobileWorkspaceSelector open={isWorkspaceSelectorOpen} onClose={() => setWorkspaceSelectorOpen(false)} />

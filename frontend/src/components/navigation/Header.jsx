@@ -9,6 +9,8 @@ import useWorkspaceContext from "../../hooks/useWorkspaceContext";
 import { workspaceModule } from "../../app/modules/registry";
 
 export default function Header({
+  isWorkspaceSelectorOpen,
+  isCommandOpen,
   onOpenWorkspaces,
   onOpenCommand,
 }) {
@@ -26,9 +28,9 @@ export default function Header({
 
       </div>
 
-      <button className="topbar-command" type="button" onClick={onOpenCommand} aria-label="Ouvrir TRIDENT Command"><Search size={17} /><span>Rechercher ou demander à TRIDENT…</span><kbd>⌘ K</kbd></button>
+      <button className="topbar-command" type="button" onClick={onOpenCommand} aria-label="Ouvrir TRIDENT Command" aria-expanded={isCommandOpen} aria-haspopup="dialog"><Search size={17} /><span>Rechercher ou demander à TRIDENT…</span><kbd>⌘ K</kbd></button>
 
-      <IconButton className="topbar-workspace-action" aria-label="Ouvrir le menu système TRIDENT" title="Menu TRIDENT" onClick={onOpenWorkspaces}>
+      <IconButton className="topbar-workspace-action" aria-label="Ouvrir le menu système TRIDENT" aria-expanded={isWorkspaceSelectorOpen} aria-haspopup="dialog" title="Menu TRIDENT" onClick={onOpenWorkspaces}>
         <Menu size={19} />
       </IconButton>
 

@@ -224,9 +224,12 @@ system rail. The shared CSS environment now composes stars, atmospheric mist,
 a distant celestial body, architectural depth, horizon, portal, light beams and
 bounded particles without importing the canonical image at runtime. The mobile
 system drawer includes only real modules, authorized Workspaces and up to five
-real conversations returned by the existing Workspace API. The latest celestial
-composition adds a layered constellation field, two atmospheric cloud depths,
-a distant sanctuary, foreground architecture and a luminous perspective axis.
+real conversations returned by the existing Workspace API. On phones this
+drawer is the single conversation-history surface, avoiding a duplicate tab
+strip above Nova while leaving all real conversations accessible. The latest
+celestial composition adds a layered constellation field, two atmospheric cloud
+depths, a distant sanctuary, foreground architecture and a luminous perspective
+axis.
 Nova owns a dedicated orbital Core, signature composer and reduced-chrome
 conversation language while retaining the existing conversation lifecycle. On
 large screens, Nova gains a real-data contextual rail backed by the existing
