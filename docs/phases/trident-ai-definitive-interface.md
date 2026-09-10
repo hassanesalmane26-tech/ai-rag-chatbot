@@ -1,11 +1,11 @@
 # TRIDENT AI — Definitive Interface Pass
 
-Status: implemented; awaiting founder visual acceptance.
+Status: in progress; founder visual rework requested.
 
-## Scope delivered
+## Rework scope
 
-The interface evolves additively from TRIDENT AI V1.0.0 Gold. It keeps the
-existing session, Workspace context, declarative lazy module registry, service
+The interface continues to evolve additively from TRIDENT AI V1.0.0 Gold. It
+keeps the existing session, Workspace context, declarative lazy module registry, service
 boundaries, APIs, and business behavior.
 
 - Large desktop: persistent system rail, central Intelligent Workspace, and a
@@ -33,7 +33,7 @@ Founder isolation, and database-authoritative tenant checks remain unchanged.
 
 ## Acceptance matrix
 
-The responsive rules explicitly cover mobile below 768 px, tablet from 768 px,
+The responsive rules explicitly cover portrait mobile below 768 px, low-height
+landscape phones through 950 px, compact-rail tablets from 768 through 1024 px,
 standard desktop/laptop through 1439 px, and the contextual three-zone shell at
-1440 px and above. Static reasoning covers 375, 390, 430, 768, 1024, 1280, 1440,
-and 1920 px. Physical-device acceptance remains an owner review activity.
+1440 px and above. Physical-device acceptance remains an owner review activity.

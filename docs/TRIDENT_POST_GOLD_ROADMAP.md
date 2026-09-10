@@ -212,16 +212,17 @@ subsequent TRIDENT AI functional completion are validated.
 
 ## Milestone record — Definitive Interface Pass
 
-Implementation status: **complete on the `trident-ai` development branch;
-pending founder visual acceptance**.
+Implementation status: **in progress on the `trident-ai` development branch;
+founder visual rework requested**.
 
-The completed pass preserves the Gold application architecture and introduces
+The rework preserves the Gold application architecture and evolves
 the approved spatial shell, a large-desktop contextual intelligence rail backed
 by real Workspace state, a responsive collapse strategy, an evolved living
 environment, and hardened modal focus behavior. The canonical image remains a
 directional reference: unsupported agents, automations, projects, telemetry,
 capacity figures, and notifications were intentionally not reproduced.
 
-The next product step begins only after visual acceptance and remains **TRIDENT
+This milestone must not be marked complete until founder visual acceptance.
+The next product step begins only after that acceptance and remains **TRIDENT
 AI functional completion and hardening**. This status does not authorize
 TRIDENT PRO or NOVA TRIDENT expansion.
