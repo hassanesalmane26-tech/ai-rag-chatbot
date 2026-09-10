@@ -41,7 +41,7 @@ test("mobile navigation is limited to four real modules and reserves its safe ar
   assert.equal((registry.match(/mobile: true/g) || []).length, 4);
   assert.match(sidebarStyles, /menu-item:not\(\.menu-item--mobile\)/);
   assert.match(sidebarStyles, /env\(safe-area-inset-bottom\)/);
-  assert.match(layoutStyles, /scroll-padding-bottom:var\(--layout-bottom-nav-offset\)/);
+  assert.match(layoutStyles, /scroll-padding-bottom:calc\(var\(--layout-bottom-nav-offset\) \+ var\(--space-3\)\)/);
 });
 
 test("the definitive shell uses real status and lightweight environmental layers", () => {

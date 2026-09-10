@@ -26,7 +26,9 @@
   .topbar .topbar-breadcrumb { max-width:min(47vw,190px); }
   .topbar h1 { margin-top:1px; font-size:11px; }
   .topbar-command,.topbar-workspace-action { width:36px; min-width:36px; height:36px; }
-  .workspace { flex:1 1 auto; min-height:0; overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:contain; -webkit-overflow-scrolling:touch; padding:10px var(--layout-mobile-gutter) calc(var(--layout-bottom-nav-offset) + var(--space-4)); scroll-padding-bottom:var(--layout-bottom-nav-offset); }
+  .workspace { flex:1 1 auto; min-height:0; overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:contain; -webkit-overflow-scrolling:touch; padding:10px var(--layout-mobile-gutter) calc(var(--layout-bottom-nav-offset) + var(--space-4)); scroll-padding-bottom:calc(var(--layout-bottom-nav-offset) + var(--space-3)); }
+  .workspace :is(input,select,textarea) { scroll-margin-block:calc(54px + env(safe-area-inset-top)) var(--layout-bottom-nav-offset); }
+  .workspace-container > :last-child { margin-bottom:var(--space-2); }
 }
 @media (max-width:390px) {
   .topbar-left .logo { display:none; }
