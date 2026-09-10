@@ -1,6 +1,6 @@
 # TRIDENT AI — Definitive Interface Pass
 
-Status: rework implemented; pending founder visual validation.
+Status: implementation complete; pending founder visual validation.
 
 ## Rework scope
 
@@ -21,8 +21,13 @@ boundaries, APIs, and business behavior.
   edge belongs to Nova's always-available composer.
 - Visual environment: CSS-generated stars, mist, a distant moon, atmospheric
   depth, cloud banks, a celestial sanctuary silhouette, a central light axis,
-  horizons, orbits, glows, and bounded particles; the canonical reference image
-  is never imported by the runtime.
+  constellation traces, foreground architecture, horizons, orbits, glows, and
+  bounded particles; the canonical reference image is never imported by the
+  runtime.
+- Nova scene: a dedicated orbital Core establishes the central hierarchy;
+  contextual prompts remain real input shortcuts, the signature composer keeps
+  the existing send lifecycle, and active conversations reduce environmental
+  contrast instead of removing the shared world.
 - Accessibility: command, Workspace, and onboarding dialogs share focus
   containment, Escape handling, initial focus, and focus restoration.
 

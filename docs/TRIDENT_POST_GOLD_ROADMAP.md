@@ -215,7 +215,7 @@ subsequent TRIDENT AI functional completion are validated.
 Implementation status: **rework implemented on the `trident-ai` development
 branch; pending founder visual validation**.
 
-The rework preserves the Gold application architecture and evolves the approved
+The final visual implementation preserves the Gold application architecture and evolves the approved
 spatial shell into a Nova-first Workspace experience. Authenticated entry opens
 Nova as the primary interaction surface; Workspace Overview remains a real
 secondary module. Phones use a focus-managed system menu instead of a competing
@@ -224,7 +224,11 @@ system rail. The shared CSS environment now composes stars, atmospheric mist,
 a distant celestial body, architectural depth, horizon, portal, light beams and
 bounded particles without importing the canonical image at runtime. The mobile
 system drawer includes only real modules, authorized Workspaces and up to five
-real conversations returned by the existing Workspace API.
+real conversations returned by the existing Workspace API. The latest celestial
+composition adds a layered constellation field, two atmospheric cloud depths,
+a distant sanctuary, foreground architecture and a luminous perspective axis.
+Nova owns a dedicated orbital Core, signature composer and reduced-chrome
+conversation language while retaining the existing conversation lifecycle.
 
 The Nova composer remains inside the authorized Workspace boundary and creates
 a real conversation before sending the first message. No attachment, voice,

@@ -39,6 +39,7 @@ test("mobile navigation uses the accessible system menu and leaves the bottom ed
   const context = readFileSync(new URL("src/context/WorkspaceContext.jsx", root), "utf8");
   const menu = readFileSync(new URL("src/components/workspace/MobileWorkspaceSelector.jsx", root), "utf8");
   const definitiveStyles = readFileSync(new URL("src/styles/definitive.css", root), "utf8");
+  const celestialStyles = readFileSync(new URL("src/styles/celestial.css", root), "utf8");
   assert.equal((registry.match(/mobile: true/g) || []).length, 4);
   assert.match(context, /useState\("conversations"\)/);
   assert.match(menu, /workspaceModules\.map/);
@@ -47,6 +48,8 @@ test("mobile navigation uses the accessible system menu and leaves the bottom ed
   assert.match(menu, /openNovaConversation\(conversation\)/);
   assert.match(menu, /role="dialog"/);
   assert.match(menu, /aria-current=/);
+  assert.match(context, /novaActiveConversationId/);
+  assert.match(celestialStyles, /mobile-workspace-sheet__recent>button\[aria-current="page"\]/);
   assert.match(definitiveStyles, /\.sidebar \{ display:none; \}/);
 });
 
@@ -68,16 +71,25 @@ test("the definitive shell uses real status and lightweight environmental layers
   assert.match(environment, /trident-environment__sanctuary/);
   assert.match(environment, /trident-environment__axis/);
   assert.match(environment, /trident-environment__floor/);
+  assert.match(environment, /trident-environment__constellations/);
+  assert.match(environment, /trident-environment__foreground/);
+  assert.match(nova, /nova-ready__core/);
   assert.match(environmentStyles, /prefers-reduced-motion:reduce/);
+  assert.match(environmentStyles, /trident-environment__clouds--low/);
 });
 
 test("tablet and landscape phone shells have explicit responsive strategies", () => {
   const styles = readFileSync(new URL("src/styles/definitive.css", root), "utf8");
+  const celestialStyles = readFileSync(new URL("src/styles/celestial.css", root), "utf8");
   assert.match(styles, /min-width:761px\) and \(max-width:1024px\) and \(min-height:501px/);
   assert.match(styles, /--layout-sidebar-width:82px/);
   assert.match(styles, /orientation:landscape\) and \(max-width:950px\) and \(max-height:500px/);
   assert.match(styles, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(styles, /env\(safe-area-inset-right\)/);
+  assert.match(celestialStyles, /orientation:landscape/);
+  assert.match(celestialStyles, /\.sidebar \{ display:none; \}/);
+  assert.match(celestialStyles, /min-width:1440px/);
+  assert.match(celestialStyles, /prefers-reduced-motion:reduce/);
 });
 
 test("mobile Workspace dialog supports modal and keyboard-close semantics", () => {

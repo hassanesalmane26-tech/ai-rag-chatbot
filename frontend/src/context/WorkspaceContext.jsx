@@ -39,6 +39,7 @@ export function WorkspaceProvider({ children }) {
   const [activeView, setActiveView] = useState("conversations");
   const [novaConversationRequest, setNovaConversationRequest] = useState(0);
   const [novaConversationTarget, setNovaConversationTarget] = useState(null);
+  const [novaActiveConversationId, setNovaActiveConversationId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mutation, setMutation] = useState(null);
@@ -55,6 +56,7 @@ export function WorkspaceProvider({ children }) {
     if (nextId) {
       setActiveView("conversations");
       setNovaConversationTarget(null);
+      setNovaActiveConversationId(null);
     }
     persistWorkspaceId(nextId);
     return selected;
@@ -134,6 +136,7 @@ export function WorkspaceProvider({ children }) {
   const requestNovaConversation = useCallback(() => {
     setActiveView("conversations");
     setNovaConversationTarget(null);
+    setNovaActiveConversationId(null);
     setNovaConversationRequest((current) => current + 1);
   }, []);
   const openNovaConversation = useCallback((conversation) => {
@@ -153,6 +156,7 @@ export function WorkspaceProvider({ children }) {
     activeView,
     novaConversationRequest,
     novaConversationTarget,
+    novaActiveConversationId,
     loading,
     error,
     mutation,
@@ -160,11 +164,12 @@ export function WorkspaceProvider({ children }) {
     setActiveView,
     requestNovaConversation,
     openNovaConversation,
+    setNovaActiveConversationId,
     selectWorkspace,
     createWorkspace,
     updateWorkspace,
     refreshWorkspaces,
-  }), [workspaces, activeWorkspace, activeWorkspaceId, activeView, novaConversationRequest, novaConversationTarget, loading, error, mutation, state, selectWorkspace, createWorkspace, updateWorkspace, refreshWorkspaces, requestNovaConversation, openNovaConversation]);
+  }), [workspaces, activeWorkspace, activeWorkspaceId, activeView, novaConversationRequest, novaConversationTarget, novaActiveConversationId, loading, error, mutation, state, selectWorkspace, createWorkspace, updateWorkspace, refreshWorkspaces, requestNovaConversation, openNovaConversation]);
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
