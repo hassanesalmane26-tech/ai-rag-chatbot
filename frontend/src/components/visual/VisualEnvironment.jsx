@@ -14,6 +14,8 @@ export default function VisualEnvironment() {
       <div className="trident-environment__vault trident-environment__vault--left" />
       <div className="trident-environment__vault trident-environment__vault--right" />
       <div className="trident-environment__horizon" />
+      <div className="trident-environment__city trident-environment__city--far"><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>
+      <div className="trident-environment__city trident-environment__city--near"><i /><i /><i /><i /><i /><i /><i /></div>
       <div className="trident-environment__sanctuary"><i /><i /><i /><i /><i /><i /><i /></div>
       <div className="trident-environment__axis" />
       <div className="trident-environment__world" />

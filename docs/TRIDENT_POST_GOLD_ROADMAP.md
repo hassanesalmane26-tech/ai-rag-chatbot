@@ -221,15 +221,19 @@ Nova as the primary interaction surface; Workspace Overview remains a real
 secondary module. Phones use a focus-managed system menu instead of a competing
 persistent bottom module bar, while tablet and desktop retain the integrated
 system rail. The shared CSS environment now composes stars, atmospheric mist,
-a distant celestial body, architectural depth, horizon, portal, light beams and
-bounded particles without importing the canonical image at runtime. The mobile
+a distant celestial body, dual abstract city silhouettes, architectural depth,
+horizon, portal, light beams and bounded particles without importing the
+canonical image at runtime. The mobile
 system drawer includes only real modules, authorized Workspaces and up to five
 real conversations returned by the existing Workspace API. On phones this
 drawer is the single conversation-history surface, avoiding a duplicate tab
 strip above Nova while leaving all real conversations accessible. The latest
 celestial composition adds a layered constellation field, two atmospheric cloud
 depths, a distant sanctuary, foreground architecture and a luminous perspective
-axis.
+axis. The responsive convergence review also removed the redundant tablet
+conversation column and corrected Nova's mobile grid so the composer is
+anchored to the true dynamic-viewport safe edge rather than leaving a dead
+lower half-screen.
 Nova owns a dedicated orbital Core, signature composer and reduced-chrome
 conversation language while retaining the existing conversation lifecycle. On
 large screens, Nova gains a real-data contextual rail backed by the existing

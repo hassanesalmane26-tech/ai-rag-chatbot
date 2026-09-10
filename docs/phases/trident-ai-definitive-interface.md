@@ -22,10 +22,10 @@ boundaries, APIs, and business behavior.
   removed so the safe-area bottom edge belongs to Nova's always-available
   composer.
 - Visual environment: CSS-generated stars, mist, a distant moon, atmospheric
-  depth, cloud banks, a celestial sanctuary silhouette, a central light axis,
-  constellation traces, foreground architecture, horizons, orbits, glows, and
-  bounded particles; the canonical reference image is never imported by the
-  runtime.
+  depth, brighter cloud banks, two abstract celestial-city silhouette planes,
+  a sanctuary, a central light axis, constellation traces, foreground
+  architecture, horizons, orbits, glows, and bounded particles; the canonical
+  reference image is never imported by the runtime.
 - Nova scene: a dedicated orbital Core establishes the central hierarchy;
   contextual prompts remain real input shortcuts, the signature composer keeps
   the existing send lifecycle, and active conversations reduce environmental
@@ -55,6 +55,11 @@ landscape phones through 950 px, compact-rail tablets from 768 through 1024 px,
 standard desktop/laptop through 1439 px, and the contextual large-screen shell
 at 1440 px and above. Mobile Nova owns an internal message scroller and a
 safe-area-aware composer; drawers and command surfaces are bounded by `100dvh`.
+The mobile Nova grid has one explicit content row so its composer reaches the
+actual safe-area edge rather than ending above an unused implicit grid row.
+Tablet Nova removes the redundant conversation column and delegates history to
+the existing system drawer, preserving the conversation lifecycle while giving
+the sanctuary the full available width.
 Decorative motion is CSS-only, low-amplitude and reduced-motion aware. Physical
 device keyboard behavior, Safari dynamic viewport transitions and final visual
 acceptance remain founder review activities.
