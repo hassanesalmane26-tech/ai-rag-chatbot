@@ -1,12 +1,17 @@
+import sanctuaryScene from "../../assets/trident-celestial-sanctuary.svg";
+
 export default function VisualEnvironment() {
   return (
     <div className="trident-environment" aria-hidden="true">
       <div className="trident-environment__stars" />
+      <div className="trident-environment__deep-stars" />
       <div className="trident-environment__constellations"><i /><i /><i /></div>
       <div className="trident-environment__moon" />
+      <div className="trident-environment__nebula"><i /><i /></div>
       <div className="trident-environment__clouds trident-environment__clouds--high"><i /><i /><i /></div>
       <div className="trident-environment__clouds trident-environment__clouds--low"><i /><i /><i /></div>
       <div className="trident-environment__cloudbank"><i /><i /><i /><i /><i /></div>
+      <img className="trident-environment__scene-art" src={sanctuaryScene} alt="" />
       <div className="trident-environment__mist trident-environment__mist--near" />
       <div className="trident-environment__mist trident-environment__mist--far" />
       <div className="trident-environment__grid" />
@@ -17,8 +22,16 @@ export default function VisualEnvironment() {
       <div className="trident-environment__horizon" />
       <div className="trident-environment__city trident-environment__city--far"><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>
       <div className="trident-environment__city trident-environment__city--near"><i /><i /><i /><i /><i /><i /><i /></div>
+      <div className="trident-environment__skyline trident-environment__skyline--left"><i /><i /><i /><i /></div>
+      <div className="trident-environment__skyline trident-environment__skyline--right"><i /><i /><i /><i /></div>
+      <div className="trident-environment__arcade trident-environment__arcade--left"><i /><i /><i /></div>
+      <div className="trident-environment__arcade trident-environment__arcade--right"><i /><i /><i /></div>
+      <div className="trident-environment__bridges"><i /><i /><i /></div>
+      <div className="trident-environment__causeway"><i /><i /><i /></div>
       <div className="trident-environment__citadel"><i /><i /><i /><i /><i /></div>
       <div className="trident-environment__sanctuary"><i /><i /><i /><i /><i /><i /><i /></div>
+      <div className="trident-environment__crown"><i /><i /><i /></div>
+      <div className="trident-environment__lightwell"><i /><i /></div>
       <div className="trident-environment__axis" />
       <div className="trident-environment__world" />
       <div className="trident-environment__portal"><i /><i /><i /></div>
