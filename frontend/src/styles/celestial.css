@@ -398,6 +398,30 @@
   background:radial-gradient(ellipse at 50% 70%,rgba(224,246,255,.48),rgba(94,168,236,.18) 46%,transparent 73%);
 }
 .trident-environment__clouds--low { opacity:.4; filter:blur(5px); }
+.trident-environment__cloudbank {
+  position:absolute;
+  z-index:0;
+  top:31%;
+  right:-7%;
+  left:-7%;
+  height:27%;
+  opacity:.62;
+  filter:blur(7px);
+  mask-image:linear-gradient(90deg,transparent,black 8% 92%,transparent);
+  animation:trident-cloudbank 64s ease-in-out infinite alternate;
+}
+.trident-environment__cloudbank i {
+  position:absolute;
+  width:34%;
+  height:88%;
+  border-radius:50%;
+  background:radial-gradient(ellipse at 50% 55%,rgba(213,244,255,.48),rgba(108,184,246,.2) 39%,rgba(67,126,218,.08) 58%,transparent 73%);
+}
+.trident-environment__cloudbank i:nth-child(1) { left:0; bottom:-8%; }
+.trident-environment__cloudbank i:nth-child(2) { left:18%; top:3%; width:29%; }
+.trident-environment__cloudbank i:nth-child(3) { left:38%; bottom:-15%; width:25%; opacity:.64; }
+.trident-environment__cloudbank i:nth-child(4) { right:17%; top:-2%; width:31%; }
+.trident-environment__cloudbank i:nth-child(5) { right:0; bottom:-5%; }
 .trident-environment__horizon { opacity:.82; }
 .trident-environment__vault { opacity:.36; }
 .trident-environment__architecture { opacity:.52; }
@@ -434,11 +458,116 @@
   background:linear-gradient(transparent,rgba(190,243,255,.52));
   box-shadow:0 0 10px rgba(101,243,239,.46);
 }
+.trident-environment__city i::after {
+  content:"";
+  position:absolute;
+  inset:17% 22% 0;
+  opacity:.65;
+  background:repeating-linear-gradient(180deg,rgba(179,232,255,.28) 0 1px,transparent 1px 18px);
+  mask-image:linear-gradient(black,transparent 86%);
+}
 .trident-environment__city i:nth-child(2n) { --city-height:72%; width:clamp(16px,2.8vw,52px); }
 .trident-environment__city i:nth-child(3n) { --city-height:35%; }
 .trident-environment__city i:nth-child(5) { --city-height:94%; width:clamp(28px,5vw,88px); opacity:.42; }
 .trident-environment__city--far { bottom:29%; height:24%; opacity:.19; filter:blur(1px) drop-shadow(0 -8px 22px rgba(74,159,255,.18)); transform:scaleX(.88); }
 .trident-environment__city--near { z-index:1; }
+.trident-environment__citadel {
+  position:absolute;
+  z-index:1;
+  right:28%;
+  bottom:16%;
+  left:28%;
+  height:33%;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  gap:clamp(10px,2.7vw,46px);
+  opacity:.48;
+  filter:drop-shadow(0 0 22px rgba(88,180,255,.34));
+  mask-image:linear-gradient(180deg,black 0 78%,transparent 100%);
+}
+.trident-environment__citadel::before {
+  content:"";
+  position:absolute;
+  right:-28%;
+  bottom:1%;
+  left:-28%;
+  height:18%;
+  border:1px solid rgba(173,229,255,.27);
+  border-radius:50% 50% 6px 6px / 70% 70% 6px 6px;
+  background:linear-gradient(180deg,rgba(92,179,255,.2),rgba(5,29,68,.52));
+  box-shadow:0 -10px 34px rgba(111,207,255,.16),inset 0 1px rgba(224,250,255,.25);
+}
+.trident-environment__citadel i {
+  position:relative;
+  width:clamp(18px,2.5vw,43px);
+  height:var(--citadel-height,48%);
+  border:1px solid rgba(184,235,255,.32);
+  border-bottom:0;
+  border-radius:52% 52% 0 0 / 9% 9% 0 0;
+  background:linear-gradient(90deg,rgba(5,27,65,.82),rgba(91,176,242,.2) 48%,rgba(5,27,65,.82));
+  box-shadow:inset 0 0 18px rgba(128,217,255,.12),0 0 25px rgba(72,160,255,.14);
+}
+.trident-environment__citadel i::before {
+  content:"";
+  position:absolute;
+  bottom:100%;
+  left:50%;
+  width:1px;
+  height:34%;
+  background:linear-gradient(transparent,rgba(225,252,255,.85));
+  box-shadow:0 0 13px rgba(101,243,239,.72);
+}
+.trident-environment__citadel i:nth-child(1),.trident-environment__citadel i:nth-child(5) { --citadel-height:34%; }
+.trident-environment__citadel i:nth-child(2),.trident-environment__citadel i:nth-child(4) { --citadel-height:55%; }
+.trident-environment__citadel i:nth-child(3) { --citadel-height:92%; width:clamp(22px,3.4vw,58px); }
+.trident-environment__terraces {
+  position:absolute;
+  z-index:1;
+  right:8%;
+  bottom:0;
+  left:8%;
+  height:25%;
+  opacity:.52;
+  filter:drop-shadow(0 -10px 24px rgba(69,160,255,.2));
+  mask-image:linear-gradient(180deg,transparent,black 28% 82%,transparent);
+}
+.trident-environment__terraces::before,.trident-environment__terraces::after,.trident-environment__terraces i {
+  content:"";
+  position:absolute;
+  right:var(--terrace-inset,0);
+  bottom:var(--terrace-bottom,0);
+  left:var(--terrace-inset,0);
+  height:44%;
+  border:1px solid rgba(151,225,255,.18);
+  border-bottom:0;
+  border-radius:50% 50% 0 0 / 34% 34% 0 0;
+  background:linear-gradient(180deg,rgba(45,111,190,.09),rgba(4,24,58,.4));
+}
+.trident-environment__terraces::before { --terrace-inset:13%; --terrace-bottom:15%; }
+.trident-environment__terraces::after { --terrace-inset:27%; --terrace-bottom:31%; }
+.trident-environment__terraces i:nth-child(1) { --terrace-inset:39%; --terrace-bottom:47%; }
+.trident-environment__terraces i:nth-child(2) { left:8%; right:auto; width:1px; height:82%; border:0; border-left:1px solid rgba(150,226,255,.18); transform:rotate(17deg); transform-origin:bottom; }
+.trident-environment__terraces i:nth-child(3) { right:8%; left:auto; width:1px; height:82%; border:0; border-right:1px solid rgba(150,226,255,.18); transform:rotate(-17deg); transform-origin:bottom; }
+
+@keyframes trident-cloudbank { from { transform:translate3d(-1.5%,0,0) scale(1); opacity:.5; } to { transform:translate3d(1.5%,5px,0) scale(1.04); opacity:.66; } }
+
+.main-layout--nova .conversation-panel--ready {
+  border-color:rgba(176,234,255,.08);
+  background:radial-gradient(ellipse at 50% 42%,rgba(28,89,174,.1),transparent 58%);
+  box-shadow:inset 0 1px rgba(255,255,255,.04),0 28px 90px rgba(0,7,32,.08);
+  backdrop-filter:none;
+}
+.main-layout--nova .conversation-panel--ready::before {
+  background:radial-gradient(circle at 50% 34%,rgba(107,198,255,.16),transparent 31%),linear-gradient(90deg,transparent,rgba(101,243,239,.018),transparent);
+}
+.nova-ready__field::before {
+  border-color:rgba(176,236,255,.12);
+  box-shadow:0 0 0 34px rgba(101,243,239,.01),0 0 130px rgba(82,171,255,.2);
+}
+.nova-ready__core::after {
+  background:radial-gradient(circle,rgba(218,253,255,.16),rgba(101,243,239,.055) 40%,transparent 72%);
+}
 
 @media (max-width:1100px) and (min-width:761px) {
   .main-layout--nova .conversation-layout { grid-template-columns:minmax(0,1fr); }
@@ -450,10 +579,14 @@
   .trident-environment__architecture { display:block; opacity:.3; }
   .trident-environment__vault { opacity:.22; }
   .trident-environment__clouds { opacity:.52; }
-  .trident-environment__clouds--low { bottom:18%; opacity:.36; }
-  .trident-environment__city { bottom:20%; height:24%; opacity:.31; }
+  .trident-environment__clouds--low { bottom:18%; opacity:.38; }
+  .trident-environment__cloudbank { top:34%; height:23%; opacity:.46; filter:blur(6px); }
+  .trident-environment__city { bottom:20%; height:27%; opacity:.38; }
   .trident-environment__city--far { bottom:31%; opacity:.16; }
   .trident-environment__city i:nth-child(even) { display:none; }
+  .trident-environment__citadel { right:20%; bottom:18%; left:20%; height:31%; opacity:.56; }
+  .trident-environment__citadel i:nth-child(1),.trident-environment__citadel i:nth-child(5) { display:none; }
+  .trident-environment__terraces { right:-14%; left:-14%; height:30%; opacity:.58; }
   .main-layout--nova .conversation-panel {
     border-color:transparent;
     border-radius:0;
@@ -473,6 +606,9 @@
 
 @media (orientation:landscape) and (max-width:950px) and (max-height:500px) {
   .trident-environment__city { bottom:8%; height:37%; }
+  .trident-environment__cloudbank { top:21%; height:38%; opacity:.42; }
+  .trident-environment__citadel { bottom:6%; height:46%; opacity:.45; }
+  .trident-environment__terraces { height:36%; opacity:.4; }
   .main-layout--nova .conversation-layout { height:calc(100dvh - 52px - env(safe-area-inset-top)); }
   .nova-ready { align-content:center; }
 }
@@ -481,8 +617,10 @@
   .main-layout--nova .conversation-panel { border-color:rgba(158,228,255,.09); }
   .trident-environment__city { opacity:.42; }
   .trident-environment__city--far { opacity:.23; }
+  .trident-environment__citadel { opacity:.58; }
+  .trident-environment__terraces { opacity:.62; }
 }
 
 @media (prefers-reduced-motion:reduce) {
-  .trident-environment__city { transform:none; }
+  .trident-environment__city,.trident-environment__cloudbank { transform:none; animation:none; }
 }

@@ -6,6 +6,7 @@ export default function VisualEnvironment() {
       <div className="trident-environment__moon" />
       <div className="trident-environment__clouds trident-environment__clouds--high"><i /><i /><i /></div>
       <div className="trident-environment__clouds trident-environment__clouds--low"><i /><i /><i /></div>
+      <div className="trident-environment__cloudbank"><i /><i /><i /><i /><i /></div>
       <div className="trident-environment__mist trident-environment__mist--near" />
       <div className="trident-environment__mist trident-environment__mist--far" />
       <div className="trident-environment__grid" />
@@ -16,11 +17,13 @@ export default function VisualEnvironment() {
       <div className="trident-environment__horizon" />
       <div className="trident-environment__city trident-environment__city--far"><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>
       <div className="trident-environment__city trident-environment__city--near"><i /><i /><i /><i /><i /><i /><i /></div>
+      <div className="trident-environment__citadel"><i /><i /><i /><i /><i /></div>
       <div className="trident-environment__sanctuary"><i /><i /><i /><i /><i /><i /><i /></div>
       <div className="trident-environment__axis" />
       <div className="trident-environment__world" />
       <div className="trident-environment__portal"><i /><i /><i /></div>
       <div className="trident-environment__floor" />
+      <div className="trident-environment__terraces"><i /><i /><i /></div>
       <div className="trident-environment__foreground"><i /><i /></div>
       <div className="trident-environment__orbit trident-environment__orbit--one" />
       <div className="trident-environment__orbit trident-environment__orbit--two" />
