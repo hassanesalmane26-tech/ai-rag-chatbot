@@ -1,4 +1,6 @@
 import sanctuaryScene from "../../assets/trident-celestial-sanctuary.svg";
+import skylineScene from "../../assets/trident-celestial-skyline.svg";
+import foregroundScene from "../../assets/trident-celestial-foreground.svg";
 
 export default function VisualEnvironment() {
   return (
@@ -11,7 +13,8 @@ export default function VisualEnvironment() {
       <div className="trident-environment__clouds trident-environment__clouds--high"><i /><i /><i /></div>
       <div className="trident-environment__clouds trident-environment__clouds--low"><i /><i /><i /></div>
       <div className="trident-environment__cloudbank"><i /><i /><i /><i /><i /></div>
-      <img className="trident-environment__scene-art" src={sanctuaryScene} alt="" />
+      <img className="trident-environment__scene-art trident-environment__scene-art--far" src={skylineScene} alt="" />
+      <img className="trident-environment__scene-art trident-environment__scene-art--mid" src={sanctuaryScene} alt="" />
       <div className="trident-environment__mist trident-environment__mist--near" />
       <div className="trident-environment__mist trident-environment__mist--far" />
       <div className="trident-environment__grid" />
@@ -38,6 +41,7 @@ export default function VisualEnvironment() {
       <div className="trident-environment__floor" />
       <div className="trident-environment__terraces"><i /><i /><i /></div>
       <div className="trident-environment__foreground"><i /><i /></div>
+      <img className="trident-environment__scene-art trident-environment__scene-art--near" src={foregroundScene} alt="" />
       <div className="trident-environment__orbit trident-environment__orbit--one" />
       <div className="trident-environment__orbit trident-environment__orbit--two" />
       <div className="trident-environment__beam trident-environment__beam--one" />

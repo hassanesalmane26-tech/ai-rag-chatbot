@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" fill="none">
+  <defs>
+    <linearGradient id="stone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#397CB2" stop-opacity=".5"/><stop offset=".32" stop-color="#0D315E" stop-opacity=".72"/><stop offset="1" stop-color="#020C21" stop-opacity=".96"/></linearGradient>
+    <linearGradient id="edge"><stop stop-color="#E8FFFF" stop-opacity=".78"/><stop offset=".42" stop-color="#6DDDEA" stop-opacity=".4"/><stop offset="1" stop-color="#6953C2" stop-opacity="0"/></linearGradient>
+    <linearGradient id="deck" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#76CBEC" stop-opacity=".38"/><stop offset=".2" stop-color="#133F72" stop-opacity=".72"/><stop offset="1" stop-color="#020C20" stop-opacity=".94"/></linearGradient>
+    <pattern id="slits" width="38" height="46" patternUnits="userSpaceOnUse"><rect x="8" y="6" width="3" height="17" rx="1.5" fill="#C6F7FF" fill-opacity=".42"/><rect x="25" y="28" width="2" height="9" rx="1" fill="#65DCEB" fill-opacity=".32"/></pattern>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g opacity=".9">
+    <path d="M0 1000V448l74-126 49 69 29-178 38-111 34 111 24 208 85-55 82 82 48 552H0Z" fill="url(#stone)"/>
+    <path d="M0 1000V594l110-74 76 42 81-117 86 74 44 481H0Z" fill="url(#slits)" opacity=".55"/>
+    <path d="M0 483 75 347l50 67 28-181 37-112 35 112 25 211 84-53 80 80" stroke="url(#edge)" stroke-width="3" filter="url(#glow)"/>
+    <path d="M1600 1000V385l-84-107-41 57-24-123-31-88-30 88-22 193-68-48-57 49-29 594h386Z" fill="url(#stone)" opacity=".92"/>
+    <path d="M1600 1000V555l-122-80-76 52-73-106-72 63-45 516h388Z" fill="url(#slits)" opacity=".52"/>
+    <path d="m1600 421-84-119-42 57-24-128-31-87-30 87-21 198-68-49-57 50" stroke="url(#edge)" stroke-width="3" filter="url(#glow)"/>
+  </g>
+  <g fill="url(#deck)" stroke="#BDEFFA" stroke-opacity=".3">
+    <path d="M0 777 336 652l242 66-140 282H0V777Z"/><path d="M1600 744 1288 626l-256 88 137 286h431V744Z"/>
+    <path d="M0 891 403 751l178 52-87 197H0V891Z" opacity=".82"/><path d="M1600 866 1224 737l-181 65 81 198h476V866Z" opacity=".8"/>
+  </g>
+  <g stroke="url(#edge)" filter="url(#glow)" opacity=".68"><path d="M0 779 336 657l241 66" stroke-width="4"/><path d="M1600 747 1289 631l-254 88" stroke-width="4"/><path d="M0 893 403 757l178 51"/><path d="M1600 869 1224 743l-181 64"/></g>
+  <g fill="#DFFFFF" opacity=".66" filter="url(#glow)"><circle cx="122" cy="418" r="3"/><circle cx="191" cy="235" r="4"/><circle cx="330" cy="410" r="3"/><circle cx="1485" cy="347" r="4"/><circle cx="1418" cy="240" r="3"/><circle cx="1298" cy="382" r="3"/></g>
+  <path d="M410 1000 700 765h200l285 235H410Z" fill="#020B1F" fill-opacity=".38" stroke="#8BDFEE" stroke-opacity=".2"/>
+  <path d="M552 1000 733 797h134l178 203H552Z" fill="url(#deck)" opacity=".46"/>
+</svg>

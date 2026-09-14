@@ -1076,3 +1076,172 @@
 @media (prefers-reduced-motion:reduce) {
   .trident-environment__scene-art { animation:none; transform:none; }
 }
+
+/* Final excellence pass: light is concentrated around the sanctuary instead
+   of being spread uniformly across the shell. The scene remains decorative. */
+.trident-environment {
+  background:
+    radial-gradient(ellipse 48% 42% at 50% 42%,rgba(169,229,255,.35),rgba(62,142,232,.12) 46%,transparent 72%),
+    radial-gradient(ellipse 82% 58% at 48% -12%,rgba(76,145,226,.78),transparent 68%),
+    radial-gradient(ellipse 44% 38% at 91% 70%,rgba(96,228,242,.18),transparent 72%),
+    radial-gradient(ellipse 38% 46% at 8% 65%,rgba(142,98,241,.15),transparent 74%),
+    linear-gradient(150deg,#092b5d 0%,#071b40 47%,#04132d 100%);
+}
+.trident-environment__scene-art {
+  opacity:1;
+  filter:brightness(1.08) contrast(1.08) saturate(108%) drop-shadow(0 24px 38px rgba(0,7,27,.26));
+}
+.trident-environment__cloudbank { opacity:.58; filter:blur(8px) brightness(1.12); }
+.trident-environment__mist--far { opacity:.31; mix-blend-mode:screen; }
+.trident-environment__mist--near { opacity:.3; }
+.trident-environment__moon { filter:brightness(1.14) drop-shadow(0 0 34px rgba(157,216,255,.28)); }
+.trident-environment__axis { opacity:.78; filter:drop-shadow(0 0 12px rgba(205,253,255,.36)); }
+.trident-environment__portal { opacity:.26; }
+.trident-environment__floor { opacity:.16; }
+.main-layout--nova .conversation-panel--ready {
+  background:linear-gradient(180deg,rgba(10,42,86,.018),rgba(2,13,38,.08));
+  box-shadow:inset 0 1px rgba(255,255,255,.07),0 28px 96px rgba(0,7,32,.055);
+}
+.main-layout--nova .conversation-panel--ready::before {
+  background:radial-gradient(circle at 50% 29%,rgba(229,252,255,.2),rgba(94,193,255,.075) 28%,rgba(90,91,231,.025) 48%,transparent 62%);
+}
+.nova-ready__core {
+  width:clamp(186px,16vw,252px);
+  filter:drop-shadow(0 22px 48px rgba(29,114,238,.28)) drop-shadow(0 0 24px rgba(199,249,255,.12));
+}
+.nova-ready__core::before {
+  border-color:rgba(222,252,255,.46);
+  box-shadow:inset 0 0 48px rgba(160,245,252,.07),0 0 46px rgba(108,210,255,.23),0 0 92px rgba(79,104,248,.1);
+}
+.nova-ready__core::after {
+  border-color:rgba(240,255,255,.48);
+  background:radial-gradient(circle,rgba(255,255,255,.28),rgba(115,234,246,.09) 38%,rgba(108,91,235,.025) 58%,transparent 74%);
+}
+.nova-ready__core .trident-mark { width:82px; height:100px; }
+.nova-ready__core .trident-mark__core { width:78px; height:96px; filter:drop-shadow(0 0 5px #fff) drop-shadow(0 0 18px rgba(182,251,255,.92)) drop-shadow(0 0 44px rgba(78,150,255,.68)); }
+.main-layout--nova .message-composer {
+  border-color:rgba(211,247,255,.4);
+  background:linear-gradient(100deg,rgba(4,24,61,.82),rgba(23,76,136,.67) 48%,rgba(10,33,78,.84));
+  box-shadow:inset 0 1px rgba(255,255,255,.19),inset 0 -1px rgba(94,184,242,.13),0 22px 68px rgba(0,6,29,.42),0 0 46px rgba(94,193,255,.15);
+}
+.main-layout--nova .sidebar,
+.main-layout--nova .conversation-list,
+.main-layout--nova .nova-context-rail>section {
+  border-color:rgba(204,241,255,.14);
+  box-shadow:inset 0 1px rgba(255,255,255,.065),0 24px 70px rgba(0,7,31,.12);
+}
+
+@media (max-width:760px) {
+  .trident-environment {
+    background:
+      radial-gradient(ellipse 74% 42% at 50% 26%,rgba(150,221,255,.34),transparent 67%),
+      radial-gradient(ellipse 74% 40% at 50% 68%,rgba(60,149,231,.18),transparent 72%),
+      radial-gradient(ellipse 52% 32% at 92% 9%,rgba(151,117,248,.13),transparent 70%),
+      linear-gradient(180deg,#0b3269 0%,#071f4b 42%,#04142f 100%);
+  }
+  .trident-environment__scene-art { object-position:50% 54%; filter:brightness(1.12) contrast(1.06) saturate(104%); }
+  .trident-environment__cloudbank { top:23%; opacity:.48; }
+  .trident-environment__moon { opacity:.84; }
+  .nova-ready__core { width:clamp(144px,39vw,174px); }
+  .nova-ready__core .trident-mark { width:68px; height:83px; }
+  .nova-ready__core .trident-mark__core { width:64px; height:79px; }
+  .nova-ready { padding-top:clamp(11px,2.7vh,24px); }
+}
+
+@media (orientation:landscape) and (max-width:950px) and (max-height:500px) {
+  .trident-environment__scene-art { object-position:center 59%; filter:brightness(1.07) contrast(1.06) saturate(102%); }
+  .nova-ready__core { width:94px; }
+  .nova-ready__core .trident-mark { width:43px; height:53px; }
+  .nova-ready__core .trident-mark__core { width:40px; height:50px; }
+}
+
+@media (min-width:1440px) {
+  .trident-environment__scene-art { filter:brightness(1.13) contrast(1.1) saturate(111%) drop-shadow(0 28px 44px rgba(0,7,27,.28)); }
+  .nova-ready__core { width:clamp(236px,17vw,286px); }
+  .main-layout--nova .conversation-panel { backdrop-filter:blur(2px) saturate(122%); }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .trident-environment__scene-art { filter:brightness(1.08) contrast(1.08) saturate(108%); }
+}
+
+/* Final art-direction layering. Each vector owns a distinct focal plane so the
+   environment reads as a city around Nova rather than one symmetrical mural. */
+.trident-environment__scene-art--far {
+  z-index:1;
+  opacity:.9;
+  object-position:center 46%;
+  filter:brightness(1.12) contrast(1.06) saturate(96%) blur(.2px) drop-shadow(0 -8px 24px rgba(115,213,255,.16));
+  transform:scale(1.035) translate3d(-.3%,0,0);
+  animation:trident-city-distance 58s ease-in-out infinite alternate;
+}
+.trident-environment__scene-art--mid {
+  z-index:2;
+  opacity:.67;
+  filter:brightness(1.03) contrast(1.06) saturate(101%) drop-shadow(0 24px 38px rgba(0,7,27,.22));
+}
+.trident-environment__scene-art--near {
+  z-index:3;
+  opacity:.62;
+  object-position:center 53%;
+  filter:brightness(.9) contrast(1.16) saturate(96%) drop-shadow(0 28px 36px rgba(0,5,22,.38));
+  transform:scale(1.025) translate3d(.2%,0,0);
+  animation:trident-city-foreground 42s ease-in-out infinite alternate;
+}
+.trident-environment__cloudbank { z-index:1; }
+.trident-environment__mist--far { z-index:1; }
+.trident-environment__mist--near { z-index:4; }
+.trident-environment__moon,.trident-environment__deep-stars,.trident-environment__constellations { z-index:0; }
+.trident-environment__axis,.trident-environment__portal { z-index:4; }
+.trident-environment__floor { z-index:3; }
+
+@keyframes trident-city-distance {
+  from { transform:scale(1.035) translate3d(-.3%,1px,0); opacity:.82; }
+  to { transform:scale(1.045) translate3d(.35%,-2px,0); opacity:.94; }
+}
+@keyframes trident-city-foreground {
+  from { transform:scale(1.025) translate3d(.2%,0,0); opacity:.7; }
+  to { transform:scale(1.031) translate3d(-.18%,-1px,0); opacity:.78; }
+}
+
+@media (max-width:760px) {
+  .trident-environment__scene-art--far {
+    width:148%;
+    left:-24%;
+    object-position:50% 49%;
+    opacity:.9;
+    filter:brightness(1.13) contrast(1.04) saturate(96%);
+  }
+  .trident-environment__scene-art--mid {
+    width:154%;
+    left:-27%;
+    object-position:50% 56%;
+    opacity:.69;
+    filter:brightness(1.07) contrast(1.05) saturate(101%);
+  }
+  .trident-environment__scene-art--near {
+    width:170%;
+    left:-35%;
+    object-position:50% 58%;
+    opacity:.54;
+    filter:brightness(.86) contrast(1.12) saturate(94%);
+  }
+}
+
+@media (orientation:landscape) and (max-width:950px) and (max-height:500px) {
+  .trident-environment__scene-art--far { width:112%; left:-6%; object-position:center 57%; opacity:.5; }
+  .trident-environment__scene-art--mid { width:112%; left:-6%; object-position:center 62%; opacity:.76; }
+  .trident-environment__scene-art--near { width:118%; left:-9%; object-position:center 64%; opacity:.56; }
+}
+
+@media (min-width:1440px) {
+  .trident-environment__scene-art--far { opacity:.96; object-position:center 48%; }
+  .trident-environment__scene-art--mid { opacity:.68; filter:brightness(1.05) contrast(1.07) saturate(104%) drop-shadow(0 28px 44px rgba(0,7,27,.24)); }
+  .trident-environment__scene-art--near { opacity:.66; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .trident-environment__scene-art--far,
+  .trident-environment__scene-art--mid,
+  .trident-environment__scene-art--near { animation:none; transform:none; }
+}
