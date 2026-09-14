@@ -1245,3 +1245,87 @@
   .trident-environment__scene-art--mid,
   .trident-environment__scene-art--near { animation:none; transform:none; }
 }
+
+/* Reference-locked world plate: pictorial material and atmosphere sit behind
+   the product-owned vector architecture, never replacing interactive UI. */
+.trident-environment__world-art {
+  position:absolute;
+  z-index:1;
+  inset:-2%;
+  width:104%;
+  height:104%;
+  max-width:none;
+  object-fit:cover;
+  object-position:center 48%;
+  opacity:.92;
+  filter:saturate(88%) contrast(1.06) brightness(.86);
+  transform:scale(1.015);
+  transform-origin:center;
+  animation:trident-world-breathe 46s ease-in-out infinite alternate;
+}
+.trident-environment::after {
+  content:"";
+  position:absolute;
+  z-index:2;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(90deg,rgba(1,12,34,.36),transparent 24% 76%,rgba(1,12,34,.36)),
+    radial-gradient(ellipse 38% 45% at 50% 48%,rgba(4,27,62,.12),rgba(2,16,43,.05) 48%,rgba(1,10,29,.25) 100%),
+    linear-gradient(180deg,rgba(6,35,79,.02),rgba(2,15,40,.16));
+  mix-blend-mode:multiply;
+}
+.trident-environment__scene-art--far { z-index:0; opacity:.07; mix-blend-mode:screen; animation:none; }
+.trident-environment__scene-art--mid { z-index:2; opacity:.055; mix-blend-mode:screen; animation:none; }
+.trident-environment__scene-art--near { z-index:3; opacity:.14; animation:none; }
+.trident-environment__cloudbank { opacity:.46; }
+.trident-environment__nebula { opacity:.42; }
+
+@keyframes trident-world-breathe {
+  from { transform:scale(1.015) translate3d(-.2%,0,0); filter:saturate(86%) contrast(1.05) brightness(.84); }
+  to { transform:scale(1.025) translate3d(.2%,-.2%,0); filter:saturate(91%) contrast(1.06) brightness(.89); }
+}
+
+@media (max-width:760px) {
+  .trident-environment__world-art {
+    inset:-1% -54%;
+    width:208%;
+    height:102%;
+    object-position:50% center;
+    opacity:.94;
+    filter:saturate(89%) contrast(1.05) brightness(.84);
+  }
+  .trident-environment::after {
+    background:
+      linear-gradient(90deg,rgba(2,15,42,.3),transparent 22% 78%,rgba(2,15,42,.3)),
+      linear-gradient(180deg,rgba(4,27,67,.02),rgba(2,14,39,.28));
+  }
+  .trident-environment__scene-art--far { opacity:.06; }
+  .trident-environment__scene-art--mid { opacity:.05; }
+  .trident-environment__scene-art--near { opacity:.12; }
+}
+
+@media (orientation:landscape) and (max-width:950px) and (max-height:500px) {
+  .trident-environment__world-art { inset:-7% -2%; width:104%; height:114%; object-position:center 48%; opacity:.9; }
+  .trident-environment__scene-art--far { opacity:.04; }
+  .trident-environment__scene-art--mid { opacity:.04; }
+  .trident-environment__scene-art--near { opacity:.1; }
+}
+
+@media (min-width:1440px) {
+  .trident-environment__world-art { opacity:.95; filter:saturate(91%) contrast(1.07) brightness(.88); }
+  .trident-environment__scene-art--far { opacity:.08; }
+  .trident-environment__scene-art--mid { opacity:.06; }
+  .trident-environment__scene-art--near { opacity:.15; }
+}
+
+@media (min-width:1536px) {
+  .trident-environment__scene-art--far { opacity:.025; }
+  .trident-environment__scene-art--mid { opacity:.018; }
+  .trident-environment__scene-art--near { opacity:.045; }
+  .nova-ready__core { width:clamp(286px,19vw,330px); }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .trident-environment__world-art { animation:none; transform:none; }
+}

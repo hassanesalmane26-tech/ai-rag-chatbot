@@ -1,12 +1,14 @@
 import sanctuaryScene from "../../assets/trident-celestial-sanctuary.svg";
 import skylineScene from "../../assets/trident-celestial-skyline.svg";
 import foregroundScene from "../../assets/trident-celestial-foreground.svg";
+import celestialWorld from "../../assets/trident-celestial-world.webp";
 
 export default function VisualEnvironment() {
   return (
     <div className="trident-environment" aria-hidden="true">
       <div className="trident-environment__stars" />
       <div className="trident-environment__deep-stars" />
+      <img className="trident-environment__world-art" src={celestialWorld} alt="" />
       <div className="trident-environment__constellations"><i /><i /><i /></div>
       <div className="trident-environment__moon" />
       <div className="trident-environment__nebula"><i /><i /></div>
