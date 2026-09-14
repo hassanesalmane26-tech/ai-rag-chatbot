@@ -2,10 +2,36 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createConversation, getConversation, listConversations, sendWorkspaceMessage } from "../../services/api.js";
 import {
   acceptsWorkspaceResult,
+  acceptsConversationResult,
+  activeConversationStorageKey,
   appendOptimisticMessage,
+  conversationLifecycle,
   reconcileFailedConversation,
   reconcileSuccessfulMessages,
+  runSingleFlight,
+  upsertRecentConversation,
 } from "./chatConversationState.js";
+
+function readPersistedConversationId(workspaceId) {
+  const key = activeConversationStorageKey(workspaceId);
+  if (!key) return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function persistConversationId(workspaceId, conversationId) {
+  const key = activeConversationStorageKey(workspaceId);
+  if (!key) return;
+  try {
+    if (conversationId) window.localStorage.setItem(key, conversationId);
+    else window.localStorage.removeItem(key);
+  } catch {
+    // Conversation persistence is a client preference, never authorization.
+  }
+}
 
 export default function useWorkspaceConversations(workspaceId) {
   const [conversations, setConversations] = useState([]);
@@ -13,15 +39,19 @@ export default function useWorkspaceConversations(workspaceId) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [loadingConversationId, setLoadingConversationId] = useState(null);
   const [sendingConversationId, setSendingConversationId] = useState(null);
   const workspaceRef = useRef(workspaceId);
   const activeConversationIdRef = useRef(null);
   const listRequestRef = useRef(0);
   const detailRequestRef = useRef(0);
+  const creationPromiseRef = useRef(null);
+  const sendingRef = useRef(new Set());
 
-  const setActiveConversation = useCallback((conversation) => {
+  const setActiveConversation = useCallback((conversation, boundWorkspaceId = workspaceRef.current) => {
     activeConversationIdRef.current = conversation?.id ?? null;
     setActiveConversationState(conversation);
+    persistConversationId(boundWorkspaceId, conversation?.id ?? null);
   }, []);
 
   useEffect(() => {
@@ -29,12 +59,16 @@ export default function useWorkspaceConversations(workspaceId) {
     listRequestRef.current += 1;
     detailRequestRef.current += 1;
     setConversations([]);
-    setActiveConversation(null);
+    activeConversationIdRef.current = null;
+    setActiveConversationState(null);
     setSendingConversationId(null);
+    creationPromiseRef.current = null;
+    sendingRef.current.clear();
     setLoading(true);
     setCreating(false);
+    setLoadingConversationId(null);
     setError("");
-  }, [workspaceId, setActiveConversation]);
+  }, [workspaceId]);
 
   const refresh = useCallback(async () => {
     if (!workspaceId) return [];
@@ -51,53 +85,80 @@ export default function useWorkspaceConversations(workspaceId) {
     }
   }, [workspaceId]);
 
-  const selectConversation = useCallback(async (conversation) => {
+  const selectConversation = useCallback(async (conversation, { restoring = false } = {}) => {
     if (!workspaceId) return;
     const request = ++detailRequestRef.current;
-    setActiveConversation(null);
+    activeConversationIdRef.current = conversation.id;
+    setActiveConversationState(null);
+    setLoadingConversationId(conversation.id);
+    if (!restoring) persistConversationId(workspaceId, conversation.id);
     try {
       const detail = await getConversation(workspaceId, conversation.id);
-      if (request !== detailRequestRef.current || !acceptsWorkspaceResult(workspaceRef.current, workspaceId)) return;
-      setActiveConversation(detail);
+      if (request !== detailRequestRef.current
+        || !acceptsConversationResult(workspaceRef.current, workspaceId, activeConversationIdRef.current, conversation.id)) return;
+      setActiveConversation(detail, workspaceId);
       setError("");
       return detail;
     } catch (err) {
-      if (request === detailRequestRef.current && workspaceRef.current === workspaceId) setError(err.message);
+      if (request === detailRequestRef.current
+        && acceptsConversationResult(workspaceRef.current, workspaceId, activeConversationIdRef.current, conversation.id)) {
+        setActiveConversation(null, workspaceId);
+        setError(err.status === 401 || err.status === 403 || err.status === 404
+          ? "Cette conversation n’est plus disponible dans ce Workspace."
+          : err.message);
+      }
+      return null;
+    } finally {
+      if (request === detailRequestRef.current && workspaceRef.current === workspaceId) {
+        setLoadingConversationId((current) => current === conversation.id ? null : current);
+      }
     }
   }, [workspaceId, setActiveConversation]);
 
   useEffect(() => {
     if (!workspaceId) return undefined;
-    refresh().catch((err) => {
+    refresh().then((values) => {
+      if (!acceptsWorkspaceResult(workspaceRef.current, workspaceId)) return;
+      const persistedId = readPersistedConversationId(workspaceId);
+      if (persistedId && values.some((conversation) => conversation.id === persistedId)) {
+        selectConversation({ id: persistedId }, { restoring: true }).catch(() => {});
+      } else if (persistedId) {
+        persistConversationId(workspaceId, null);
+      }
+    }).catch((err) => {
       if (acceptsWorkspaceResult(workspaceRef.current, workspaceId)) setError(err.message);
     });
     return () => {
       listRequestRef.current += 1;
       detailRequestRef.current += 1;
     };
-  }, [workspaceId, refresh]);
+  }, [workspaceId, refresh, selectConversation]);
 
-  const addConversation = useCallback(async () => {
-    if (!workspaceId || creating) return null;
-    setCreating(true);
-    setError("");
-    try {
-      const created = await createConversation(workspaceId);
-      if (!acceptsWorkspaceResult(workspaceRef.current, workspaceId)) return;
-      setConversations((items) => [created, ...items]);
-      return await selectConversation(created);
-    } catch (err) {
-      if (acceptsWorkspaceResult(workspaceRef.current, workspaceId)) setError(err.message);
-      return null;
-    } finally {
-      if (acceptsWorkspaceResult(workspaceRef.current, workspaceId)) setCreating(false);
-    }
-  }, [workspaceId, creating, selectConversation]);
+  const addConversation = useCallback(() => {
+    if (!workspaceId) return Promise.resolve(null);
+    const requestWorkspaceId = workspaceId;
+    return runSingleFlight(creationPromiseRef, async () => {
+      setCreating(true);
+      setError("");
+      try {
+        const created = await createConversation(requestWorkspaceId);
+        if (!acceptsWorkspaceResult(workspaceRef.current, requestWorkspaceId)) return null;
+        setConversations((items) => upsertRecentConversation(items, created));
+        return await selectConversation(created);
+      } catch (err) {
+        if (acceptsWorkspaceResult(workspaceRef.current, requestWorkspaceId)) setError(err.message);
+        return null;
+      } finally {
+        if (acceptsWorkspaceResult(workspaceRef.current, requestWorkspaceId)) setCreating(false);
+      }
+    });
+  }, [workspaceId, selectConversation]);
 
   const sendMessage = useCallback(async (content) => {
     const conversationId = activeConversationIdRef.current;
-    if (!workspaceId || !conversationId || !content.trim() || sendingConversationId === conversationId) return false;
+    if (!workspaceId || !conversationId || !content.trim() || sendingRef.current.has(conversationId)) return false;
     const pendingId = `pending-${Date.now()}`;
+    sendingRef.current.add(conversationId);
     setSendingConversationId(conversationId);
     setError("");
     setActiveConversationState((current) => current?.id === conversationId ? {
@@ -106,7 +167,7 @@ export default function useWorkspaceConversations(workspaceId) {
     } : current);
     try {
       const reply = await sendWorkspaceMessage(workspaceId, conversationId, content.trim());
-      if (!acceptsWorkspaceResult(workspaceRef.current, workspaceId) || activeConversationIdRef.current !== conversationId) return true;
+      if (!acceptsConversationResult(workspaceRef.current, workspaceId, activeConversationIdRef.current, conversationId)) return true;
       setActiveConversationState((current) => current?.id === conversationId ? {
         ...current,
         messages: reconcileSuccessfulMessages(current.messages, pendingId, reply),
@@ -114,10 +175,10 @@ export default function useWorkspaceConversations(workspaceId) {
       refresh().catch(() => {});
       return true;
     } catch (err) {
-      if (acceptsWorkspaceResult(workspaceRef.current, workspaceId) && activeConversationIdRef.current === conversationId) {
+      if (acceptsConversationResult(workspaceRef.current, workspaceId, activeConversationIdRef.current, conversationId)) {
         // The user turn may already be durable; reload it instead of hiding backend truth.
         const detail = await getConversation(workspaceId, conversationId).catch(() => null);
-        if (acceptsWorkspaceResult(workspaceRef.current, workspaceId) && activeConversationIdRef.current === conversationId) {
+        if (acceptsConversationResult(workspaceRef.current, workspaceId, activeConversationIdRef.current, conversationId)) {
           setError(err.message);
           setActiveConversationState((current) => {
             if (current?.id !== conversationId) return current;
@@ -129,9 +190,27 @@ export default function useWorkspaceConversations(workspaceId) {
       }
       return false;
     } finally {
+      sendingRef.current.delete(conversationId);
       if (acceptsWorkspaceResult(workspaceRef.current, workspaceId)) setSendingConversationId((current) => current === conversationId ? null : current);
     }
-  }, [workspaceId, sendingConversationId, refresh]);
+  }, [workspaceId, refresh]);
+
+  const startConversationWithMessage = useCallback(async (content) => {
+    const created = activeConversationIdRef.current
+      ? activeConversation
+      : await addConversation();
+    if (!created) return false;
+    return sendMessage(content);
+  }, [activeConversation, addConversation, sendMessage]);
+
+  const lifecycle = conversationLifecycle({
+    workspaceId,
+    activeConversation,
+    creating,
+    loadingConversation: Boolean(loadingConversationId),
+    sending: sendingConversationId === activeConversation?.id,
+    error,
+  });
 
   return {
     conversations,
@@ -140,9 +219,12 @@ export default function useWorkspaceConversations(workspaceId) {
     loading,
     creating,
     isSending: sendingConversationId === activeConversation?.id,
+    isLoadingConversation: Boolean(loadingConversationId),
     refresh,
     selectConversation,
     addConversation,
     sendMessage,
+    startConversationWithMessage,
+    lifecycle,
   };
 }

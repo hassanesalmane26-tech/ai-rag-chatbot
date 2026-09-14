@@ -3,11 +3,16 @@ import test from "node:test";
 
 import {
   acceptsWorkspaceResult,
+  acceptsConversationResult,
+  activeConversationStorageKey,
   appendOptimisticMessage,
+  conversationLifecycle,
   reconcileFailedConversation,
   reconcileSuccessfulMessages,
   rollbackPendingMessage,
+  runSingleFlight,
   uniqueDocumentCitations,
+  upsertRecentConversation,
 } from "./chatConversationState.js";
 
 test("shows each cited document once while preserving distinct sources", () => {
@@ -96,4 +101,52 @@ test("keeps the backend truth and exposes the send error after a failed turn", (
 test("rejects results from a workspace that is no longer active", () => {
   assert.equal(acceptsWorkspaceResult("workspace-b", "workspace-a"), false);
   assert.equal(acceptsWorkspaceResult("workspace-a", "workspace-a"), true);
+});
+
+test("rejects a late conversation response after rapid switching", () => {
+  assert.equal(acceptsConversationResult("workspace-a", "workspace-a", "conversation-b", "conversation-a"), false);
+  assert.equal(acceptsConversationResult("workspace-a", "workspace-a", "conversation-b", "conversation-b"), true);
+  assert.equal(acceptsConversationResult("workspace-b", "workspace-a", "conversation-b", "conversation-b"), false);
+});
+
+test("keeps recent conversations unique and ordered by server timestamps", () => {
+  const result = upsertRecentConversation([
+    { id: "older", updated_at: "2026-01-01T00:00:00Z" },
+    { id: "active", updated_at: "2026-01-02T00:00:00Z" },
+  ], { id: "older", updated_at: "2026-01-03T00:00:00Z", title: "Updated" });
+  assert.deepEqual(result.map((conversation) => conversation.id), ["older", "active"]);
+  assert.equal(result[0].title, "Updated");
+});
+
+test("persists active conversation separately for each Workspace", () => {
+  assert.equal(activeConversationStorageKey("workspace-a"), "trident.ai.nova.active_conversation.workspace-a");
+  assert.equal(activeConversationStorageKey("workspace-b"), "trident.ai.nova.active_conversation.workspace-b");
+  assert.equal(activeConversationStorageKey(null), null);
+});
+
+test("double submit shares one conversation creation operation", async () => {
+  const ref = { current: null };
+  let calls = 0;
+  const operation = async () => {
+    calls += 1;
+    return { id: "conversation-1" };
+  };
+  const first = runSingleFlight(ref, operation);
+  const second = runSingleFlight(ref, operation);
+  assert.equal(first, second);
+  assert.deepEqual(await first, { id: "conversation-1" });
+  assert.equal(calls, 1);
+  assert.equal(ref.current, null);
+});
+
+test("derives explicit Nova lifecycle states from real request state", () => {
+  const base = { workspaceId: "workspace-a", activeConversation: null, creating: false, loadingConversation: false, sending: false, error: "" };
+  assert.equal(conversationLifecycle(base), "draft");
+  assert.equal(conversationLifecycle({ ...base, creating: true }), "creating");
+  assert.equal(conversationLifecycle({ ...base, loadingConversation: true }), "messages_loading");
+  assert.equal(conversationLifecycle({ ...base, activeConversation: { id: "conversation-a" } }), "ready");
+  assert.equal(conversationLifecycle({ ...base, activeConversation: { id: "conversation-a" }, sending: true }), "sending");
+  assert.equal(conversationLifecycle({ ...base, activeConversation: { id: "conversation-a" }, error: "offline" }), "send_failed");
+  assert.equal(conversationLifecycle({ ...base, error: "missing" }), "load_failed");
+  assert.equal(conversationLifecycle({ ...base, workspaceId: null }), "unavailable");
 });

@@ -36,3 +36,47 @@ export function reconcileFailedConversation(current, pendingId, persistedDetail,
 export function acceptsWorkspaceResult(currentWorkspaceId, requestWorkspaceId) {
   return currentWorkspaceId === requestWorkspaceId;
 }
+
+export function acceptsConversationResult(
+  currentWorkspaceId,
+  requestWorkspaceId,
+  currentConversationId,
+  requestConversationId,
+) {
+  return acceptsWorkspaceResult(currentWorkspaceId, requestWorkspaceId)
+    && currentConversationId === requestConversationId;
+}
+
+export function upsertRecentConversation(conversations, conversation) {
+  if (!conversation?.id) return conversations;
+  return [conversation, ...conversations.filter((item) => item.id !== conversation.id)]
+    .sort((left, right) => {
+      const dateDifference = Date.parse(right.updated_at || right.created_at || 0)
+        - Date.parse(left.updated_at || left.created_at || 0);
+      return dateDifference || right.id.localeCompare(left.id);
+    });
+}
+
+export function activeConversationStorageKey(workspaceId) {
+  return workspaceId ? `trident.ai.nova.active_conversation.${workspaceId}` : null;
+}
+
+export function runSingleFlight(ref, operation) {
+  if (ref.current) return ref.current;
+  const pending = Promise.resolve().then(operation).finally(() => {
+    if (ref.current === pending) ref.current = null;
+  });
+  ref.current = pending;
+  return pending;
+}
+
+export function conversationLifecycle({ workspaceId, activeConversation, creating, loadingConversation, sending, error }) {
+  if (!workspaceId) return "unavailable";
+  if (creating) return "creating";
+  if (loadingConversation) return "messages_loading";
+  if (sending) return "sending";
+  if (error && activeConversation) return "send_failed";
+  if (error) return "load_failed";
+  if (activeConversation) return "ready";
+  return "draft";
+}
