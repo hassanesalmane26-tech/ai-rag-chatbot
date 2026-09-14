@@ -6,7 +6,7 @@ extended with organizations and members in TRIDENT AI without changing public ID
 
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.sql import func
 
 from app.database.database import Base
@@ -70,7 +70,7 @@ class WorkspaceDocument(Base):
     size_bytes = Column(Integer, nullable=False)
     content_hash = Column(String(64), nullable=True)
     version = Column(Integer, nullable=False, default=1)
-    status = Column(String(24), nullable=False, default="pending")
+    status = Column(String(24), nullable=False, default="uploaded")
     ingestion_attempts = Column(Integer, nullable=False, default=0)
     chunk_count = Column(Integer, nullable=False, default=0)
     error_message = Column(Text, nullable=True)
@@ -81,6 +81,11 @@ class WorkspaceDocument(Base):
     indexed_at = Column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
+        CheckConstraint(
+            "status IN ('uploaded','pending_scan','scanning','scan_failed','rejected',"
+            "'pending_processing','processing','indexed','processing_failed','deleting','delete_failed')",
+            name="ck_workspace_documents_status",
+        ),
         Index(
             "uq_workspace_documents_workspace_content_hash",
             "workspace_id",

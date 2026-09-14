@@ -7,6 +7,7 @@ import {
 } from "../../services/api";
 import {
   acceptsDocumentResult,
+  documentStatus,
   prependDocument,
   removeDocumentById,
   validateDocumentFile,
@@ -22,15 +23,15 @@ export default function useWorkspaceDocuments(workspaceId) {
   const workspaceRef = useRef(workspaceId);
   const requestVersionRef = useRef(0);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async ({ background = false } = {}) => {
     if (!workspaceId) {
       setDocuments([]);
       setLoading(false);
       return [];
     }
     const request = ++requestVersionRef.current;
-    setLoading(true);
-    setError("");
+    if (!background) setLoading(true);
+    if (!background) setError("");
     try {
       const values = await listDocuments(workspaceId);
       if (request !== requestVersionRef.current || !acceptsDocumentResult(workspaceRef.current, workspaceId)) return [];
@@ -40,9 +41,16 @@ export default function useWorkspaceDocuments(workspaceId) {
       if (request === requestVersionRef.current && acceptsDocumentResult(workspaceRef.current, workspaceId)) setError(err.message);
       return [];
     } finally {
-      if (request === requestVersionRef.current && acceptsDocumentResult(workspaceRef.current, workspaceId)) setLoading(false);
+      if (!background && request === requestVersionRef.current && acceptsDocumentResult(workspaceRef.current, workspaceId)) setLoading(false);
     }
   }, [workspaceId]);
+
+  useEffect(() => {
+    const processing = documents.some((document) => ["pending", "processing"].includes(documentStatus(document.status).tone));
+    if (!workspaceId || !processing) return undefined;
+    const timer = window.setInterval(() => { refresh({ background: true }); }, 2500);
+    return () => window.clearInterval(timer);
+  }, [documents, workspaceId, refresh]);
 
   useEffect(() => {
     workspaceRef.current = workspaceId;

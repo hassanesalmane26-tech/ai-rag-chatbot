@@ -21,7 +21,7 @@ import httpx
 import uvicorn
 from fastapi import UploadFile
 from langchain_core.documents import Document
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from app.main import app
@@ -32,6 +32,10 @@ from app.identity.models import ExternalIdentity, User
 from app.database.schema import HEAD_REVISION
 from app.knowledge.service import MAX_UPLOAD_BYTES, create_document, delete_document
 from app.knowledge.reconciliation import audit_workspace_knowledge
+from app.knowledge.processing import process_document
+from app.knowledge.scanner import ScanResult, ScanVerdict
+from app.knowledge.storage import LocalObjectStorage
+from app.conversations.service import build_grounding
 from app.rag.search import search_workspace_documents
 from app.modules.registry import modules_for_edition
 from app.governance.rate_limit import FixedWindowRateLimiter
@@ -92,6 +96,11 @@ class InMemoryVectorStore:
         return [(doc, 1.0) for doc in filtered[:k]]
 
 
+class SafeTestScanner:
+    def scan(self, _path):
+        return ScanResult(ScanVerdict.SAFE, "test")
+
+
 class AppClient:
     """Exercise the ASGI application through the same Uvicorn boundary as runtime."""
 
@@ -148,6 +157,8 @@ class GenesisApiTests(unittest.TestCase):
 
     def setUp(self):
         app.state.rate_limiter = FixedWindowRateLimiter(10000)
+        with engine.begin() as connection:
+            connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
         Base.metadata.drop_all(bind=engine)
         Base.metadata.create_all(bind=engine)
         db = SessionLocal()
@@ -559,7 +570,9 @@ class GenesisApiTests(unittest.TestCase):
         self.assertEqual(first.json()["data"]["id"], second.json()["data"]["id"])
         listed = self.client.get(f"/v1/workspaces/{workspace['id']}/documents")
         self.assertEqual(len(listed.json()["data"]), 1)
-        self.assertEqual(len(vector.documents), 1)
+        self.assertEqual(first.json()["data"]["status"], "pending_scan")
+        self.assertFalse(first.json()["data"]["ready"])
+        self.assertEqual(len(vector.documents), 0)
 
     def test_document_original_download_uses_workspace_authorization(self):
         first, second = self.workspace("Files owner"), self.workspace("Files denied")
@@ -590,29 +603,49 @@ class GenesisApiTests(unittest.TestCase):
         failing_vector.add_documents.side_effect = RuntimeError("index offline")
         with tempfile.TemporaryDirectory() as tempdir, patch(
             "app.knowledge.service.DOCUMENTS_ROOT", Path(tempdir)
-        ), patch("app.knowledge.service.vectorstore", failing_vector):
+        ):
             failed = self.client.post(
                 f"/v1/workspaces/{workspace['id']}/documents",
                 files={"file": ("retry.txt", b"retryable content", "text/plain")},
             )
-            self.assertEqual(failed.status_code, 503, failed.text)
+            self.assertEqual(failed.status_code, 201, failed.text)
             listed = self.client.get(f"/v1/workspaces/{workspace['id']}/documents").json()["data"]
             self.assertEqual(len(listed), 1)
             document = listed[0]
-            self.assertEqual(document["status"], "failed")
+            self.assertEqual(document["status"], "pending_scan")
             stored = Path(tempdir) / workspace["id"] / next(
                 path.name for path in (Path(tempdir) / workspace["id"]).iterdir()
             )
             self.assertTrue(stored.exists())
 
+            db = SessionLocal()
+            try:
+                persisted = db.get(WorkspaceDocument, document["id"])
+                with self.assertRaises(RuntimeError):
+                    process_document(
+                        db, persisted, scanner=SafeTestScanner(),
+                        storage=LocalObjectStorage(Path(tempdir)), store=failing_vector,
+                    )
+                self.assertEqual(persisted.status, "processing_failed")
+            finally:
+                db.close()
+
             recovered_vector = InMemoryVectorStore()
-            with patch("app.knowledge.service.vectorstore", recovered_vector):
-                retried = self.client.post(
-                    f"/v1/workspaces/{workspace['id']}/documents/{document['id']}/retry"
-                )
+            retried = self.client.post(
+                f"/v1/workspaces/{workspace['id']}/documents/{document['id']}/retry"
+            )
             self.assertEqual(retried.status_code, 200, retried.text)
-            self.assertEqual(retried.json()["data"]["status"], "indexed")
-            self.assertEqual(retried.json()["data"]["ingestion_attempts"], 2)
+            self.assertEqual(retried.json()["data"]["status"], "pending_processing")
+            db = SessionLocal()
+            try:
+                persisted = db.get(WorkspaceDocument, document["id"])
+                process_document(
+                    db, persisted, scanner=SafeTestScanner(),
+                    storage=LocalObjectStorage(Path(tempdir)), store=recovered_vector,
+                )
+                self.assertEqual(persisted.ingestion_attempts, 2)
+            finally:
+                db.close()
             self.assertEqual(len(recovered_vector.documents), 1)
 
     def test_document_retry_is_scoped_to_workspace(self):
@@ -625,7 +658,7 @@ class GenesisApiTests(unittest.TestCase):
                 storage_name="private.txt",
                 media_type="text/plain",
                 size_bytes=7,
-                status="failed",
+                status="processing_failed",
             )
             db.add(document)
             db.commit()
@@ -643,13 +676,22 @@ class GenesisApiTests(unittest.TestCase):
         vector = InMemoryVectorStore()
         provider = MagicMock()
         provider.return_value.responses.create.return_value.output_text = "TRIDENT est un AI Operating System."
-        with tempfile.TemporaryDirectory() as tempdir, patch("app.knowledge.service.DOCUMENTS_ROOT", Path(tempdir)), patch("app.knowledge.service.vectorstore", vector), patch("app.rag.search.vectorstore", vector), patch("app.conversations.service.OpenAI", provider):
+        with tempfile.TemporaryDirectory() as tempdir, patch("app.knowledge.service.DOCUMENTS_ROOT", Path(tempdir)), patch("app.rag.search.vectorstore", vector), patch("app.conversations.service.OpenAI", provider):
             uploaded = self.client.post(
                 f"/v1/workspaces/{workspace['id']}/documents",
                 files={"file": ("vision.txt", b"TRIDENT est un AI Operating System centre sur le Workspace.", "text/plain")},
             )
             self.assertEqual(uploaded.status_code, 201, uploaded.text)
             document = uploaded.json()["data"]
+            db = SessionLocal()
+            try:
+                persisted = db.get(WorkspaceDocument, document["id"])
+                process_document(
+                    db, persisted, scanner=SafeTestScanner(),
+                    storage=LocalObjectStorage(Path(tempdir)), store=vector,
+                )
+            finally:
+                db.close()
             answered = self.client.post(
                 f"/v1/workspaces/{workspace['id']}/conversations/{conversation['id']}/messages",
                 json={"content": "Quel est le role de TRIDENT ?"},
@@ -722,6 +764,12 @@ class GenesisApiTests(unittest.TestCase):
         for path in paths:
             denied = self.client.get(path, headers=headers)
             self.assertEqual(denied.status_code, 403, f"{path}: {denied.text}")
+        denied_upload = self.client.post(
+            f"/v1/workspaces/{workspace['id']}/documents",
+            headers=headers,
+            files={"file": ("private.txt", b"tenant A", "text/plain")},
+        )
+        self.assertEqual(denied_upload.status_code, 403, denied_upload.text)
         audit = self.client.get(
             f"/v1/organizations/{self.primary_organization_id}/audit-events", headers=headers
         )
@@ -794,10 +842,14 @@ class KnowledgeServiceTests(unittest.TestCase):
         upload = UploadFile(filename="guide.txt", file=io.BytesIO(b"TRIDENT Knowledge"))
         chunk = Document(page_content="TRIDENT Knowledge", metadata={})
         vector = MagicMock()
-        with patch("app.knowledge.service.DOCUMENTS_ROOT", Path(self.tempdir.name)), patch("app.knowledge.service.load_document", return_value=[chunk]), patch("app.knowledge.service.split_documents", return_value=[chunk]), patch("app.knowledge.service.vectorstore", vector):
+        with patch("app.knowledge.service.DOCUMENTS_ROOT", Path(self.tempdir.name)), patch("app.knowledge.service.vectorstore", vector), patch("app.knowledge.processing.load_document", return_value=[chunk]), patch("app.knowledge.processing.split_documents", return_value=[chunk]):
             document = asyncio.run(create_document(self.db, self.workspace.id, upload))
             stored = Path(self.tempdir.name) / self.workspace.id / document.storage_name
             self.assertTrue(stored.exists())
+            process_document(
+                self.db, document, scanner=SafeTestScanner(),
+                storage=LocalObjectStorage(Path(self.tempdir.name)), store=vector,
+            )
             self.assertEqual(document.status, "indexed")
             self.assertEqual(chunk.metadata["workspace_id"], self.workspace.id)
             self.assertEqual(chunk.metadata["document_id"], document.id)
@@ -819,6 +871,25 @@ class KnowledgeServiceTests(unittest.TestCase):
         vector.similarity_search_with_relevance_scores.assert_called_once_with(
             "question", k=5, filter={"workspace_id": "workspace-a"}
         )
+
+    def test_only_indexed_documents_are_grounded_for_nova(self):
+        document = WorkspaceDocument(
+            workspace_id=self.workspace.id, display_name="waiting.txt", storage_name="waiting.txt",
+            media_type="text/plain", size_bytes=7, status="pending_processing",
+        )
+        self.db.add(document)
+        self.db.commit()
+        chunk = Document(page_content="not ready", metadata={
+            "workspace_id": self.workspace.id, "document_id": document.id,
+            "document_name": document.display_name,
+        })
+        vector = MagicMock()
+        vector.similarity_search_with_relevance_scores.return_value = [(chunk, 1.0)]
+        with patch("app.conversations.service.search_workspace_documents", return_value=[(chunk, 1.0)]):
+            self.assertEqual(build_grounding(self.db, self.workspace.id, "question"), [])
+            document.status = "indexed"
+            self.db.commit()
+            self.assertEqual(len(build_grounding(self.db, self.workspace.id, "question")), 1)
 
     def test_partial_delete_preserves_metadata_and_original_for_retry(self):
         document = WorkspaceDocument(

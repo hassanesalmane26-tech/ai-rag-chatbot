@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { AlertTriangle, FileText, LoaderCircle, RefreshCw, Search, ShieldCheck, Trash2, Upload } from "lucide-react";
 import useWorkspaceContext from "../../hooks/useWorkspaceContext";
 import {
+  documentStatus,
   documentStatusLabel,
   formatDocumentSize,
 } from "./documentState";
@@ -50,22 +51,22 @@ export default function DocumentsView() {
 
     <div className={`document-dropzone ${dragging ? "is-dragging" : ""}`} onDragEnter={(event) => { event.preventDefault(); setDragging(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDragging(false); }} onDrop={dropFile}>
       <div className="document-dropzone__icon" aria-hidden="true">{uploading ? <LoaderCircle className="spin" /> : <Upload />}</div>
-      <div><h3>{uploading ? "Indexation dans le Workspace…" : "Ajoutez une source à votre Workspace"}</h3><p>PDF, TXT ou DOCX · 20 Mo maximum</p></div>
-      <label className="upload-action">{uploading ? "Traitement…" : "Choisir un document"}<input ref={inputRef} type="file" accept=".pdf,.txt,.docx" onChange={chooseFile} disabled={uploading} /></label>
+      <div><h3>{uploading ? "Envoi sécurisé au Workspace…" : "Ajoutez une source à votre Workspace"}</h3><p>PDF, TXT ou DOCX · 20 Mo maximum</p></div>
+      <label className="upload-action">{uploading ? "Envoi…" : "Choisir un document"}<input ref={inputRef} type="file" accept=".pdf,.txt,.docx" onChange={chooseFile} disabled={uploading} /></label>
     </div>
 
     {error && <div className="inline-error document-error" role="alert"><AlertTriangle size={18} /><span>{error}</span><button type="button" onClick={refresh} disabled={loading}>Réessayer</button></div>}
 
     <div className="document-section-heading"><div><span>BIBLIOTHÈQUE DU WORKSPACE</span><h3>Sources disponibles</h3></div>{!loading && documents.length > 0 && <div className="knowledge-tools"><label><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filtrer les sources" aria-label="Filtrer les sources Knowledge" /></label><button type="button" className="document-refresh" onClick={refresh} aria-label="Actualiser les documents"><RefreshCw size={16} /> Actualiser</button></div>}</div>
 
-    {loading ? <div className="document-loading" aria-live="polite"><LoaderCircle className="spin" /><span>Synchronisation de Knowledge…</span></div> : <div className="document-grid">{documents.length === 0 ? <div className="empty-state"><FileText size={30} /><h3>Donnez du contexte à Nova</h3><p>Importez votre première source privée dans Knowledge pour enrichir ce Workspace.</p><button type="button" onClick={() => inputRef.current?.click()}>Choisir une première source</button></div> : filteredDocuments.length === 0 ? <div className="empty-state"><Search size={28} /><h3>Aucune source correspondante</h3><p>Essayez un autre nom de fichier.</p><button type="button" onClick={() => setQuery("")}>Effacer le filtre</button></div> : filteredDocuments.map((document) => <article key={document.id} className={`document-card document-card--${document.status}`}>
+    {loading ? <div className="document-loading" aria-live="polite"><LoaderCircle className="spin" /><span>Synchronisation de Knowledge…</span></div> : <div className="document-grid">{documents.length === 0 ? <div className="empty-state"><FileText size={30} /><h3>Donnez du contexte à Nova</h3><p>Importez votre première source privée dans Knowledge pour enrichir ce Workspace.</p><button type="button" onClick={() => inputRef.current?.click()}>Choisir une première source</button></div> : filteredDocuments.length === 0 ? <div className="empty-state"><Search size={28} /><h3>Aucune source correspondante</h3><p>Essayez un autre nom de fichier.</p><button type="button" onClick={() => setQuery("")}>Effacer le filtre</button></div> : filteredDocuments.map((document) => { const state = documentStatus(document.status); return <article key={document.id} className={`document-card document-card--${state.tone}`}>
       <div className="document-card__icon"><FileText size={22} /></div>
       <div className="document-card__body"><strong title={document.display_name}>{document.display_name}</strong><span>{formatDocumentSize(document.size_bytes)} · ajouté le {uploadedAt(document.created_at)}</span>{document.error_message && <small>{document.error_message}</small>}</div>
-      <div className="document-card__status" title={documentStatusLabel(document.status)}>{document.status === "failed" ? <AlertTriangle size={15} /> : <ShieldCheck size={15} />}<span>{document.status === "indexed" ? "INDEXÉ" : document.status.toUpperCase()}</span></div>
+      <div className="document-card__status" title={documentStatusLabel(document.status)}>{["failed", "rejected"].includes(state.tone) ? <AlertTriangle size={15} /> : state.tone === "processing" ? <LoaderCircle className="spin" size={15} /> : <ShieldCheck size={15} />}<span>{state.label.toUpperCase()}</span></div>
       <div className="document-card__actions">
-        {document.status === "failed" && <button className="document-card__retry" type="button" onClick={() => retryDocument(document.id)} aria-label={`Relancer l’indexation de ${document.display_name}`} disabled={Boolean(retryingId) || Boolean(deletingId)}>{retryingId === document.id ? <LoaderCircle className="spin" size={16} /> : <RefreshCw size={16} />}</button>}
+        {state.retryable && <button className="document-card__retry" type="button" onClick={() => retryDocument(document.id)} aria-label={`Relancer le traitement de ${document.display_name}`} disabled={Boolean(retryingId) || Boolean(deletingId)}>{retryingId === document.id ? <LoaderCircle className="spin" size={16} /> : <RefreshCw size={16} />}</button>}
         <button className="document-card__delete" type="button" onClick={() => remove(document)} aria-label={`Supprimer ${document.display_name}`} disabled={Boolean(deletingId) || Boolean(retryingId) || uploading}>{deletingId === document.id ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}</button>
       </div>
-    </article>)}</div>}
+    </article>; })}</div>}
   </section>;
 }

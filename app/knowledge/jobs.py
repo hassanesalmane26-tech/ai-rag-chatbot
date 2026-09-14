@@ -55,6 +55,19 @@ def finish_job(db: Session, job: KnowledgeJob) -> None:
     db.commit()
 
 
+def requeue_ingestion(db: Session, job: KnowledgeJob) -> None:
+    """Explicit manual retry; exhausted jobs remain terminal."""
+    if job.attempts >= job.max_attempts:
+        raise ValueError("Knowledge job retry limit reached")
+    job.status = "queued"
+    job.available_at = datetime.now(timezone.utc)
+    job.lease_expires_at = None
+    job.worker_id = None
+    job.error_message = None
+    job.completed_at = None
+    db.commit()
+
+
 def fail_job(db: Session, job: KnowledgeJob, message: str) -> None:
     job.status="failed" if job.attempts >= job.max_attempts else "queued"
     job.error_message=message[:1000]; job.lease_expires_at=None

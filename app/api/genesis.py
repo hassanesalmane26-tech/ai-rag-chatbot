@@ -266,7 +266,7 @@ def list_documents(
     query = db.query(WorkspaceDocument).filter_by(workspace_id=workspace_id)
     total = query.count()
     documents = query.order_by(WorkspaceDocument.created_at.desc(), WorkspaceDocument.id.desc()).offset(page.offset).limit(page.limit).all()
-    return data([serialize_document(document) for document in documents], {"pagination": page_meta(page, total)})
+    return data([serialize_document(document, db) for document in documents], {"pagination": page_meta(page, total)})
 
 
 @router.get("/workspaces/{workspace_id}/documents/{document_id}/original")
@@ -306,7 +306,7 @@ async def upload_document(
                        principal=principal, organization_id=tenant.organization_id, workspace_id=workspace_id,
                        request_id=request.state.request_id)
     db.commit()
-    return data(serialize_document(document))
+    return data(serialize_document(document, db))
 
 
 @router.delete("/workspaces/{workspace_id}/documents/{document_id}")
@@ -346,4 +346,4 @@ def retry_failed_document(
                        principal=principal, organization_id=tenant.organization_id, workspace_id=workspace_id,
                        request_id=request.state.request_id)
     db.commit()
-    return data(serialize_document(document))
+    return data(serialize_document(document, db))

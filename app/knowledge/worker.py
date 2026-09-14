@@ -9,7 +9,7 @@ import time
 from app.database.database import SessionLocal
 from app.database.genesis_models import WorkspaceDocument
 from app.knowledge.jobs import claim_next_job, fail_job, finish_job
-from app.knowledge.service import ingest_document
+from app.knowledge.processing import NonRetryableProcessingError, process_document
 
 logger = logging.getLogger("trident.knowledge.worker")
 
@@ -27,10 +27,13 @@ def process_one(worker_id: str) -> bool:
             return True
         try:
             if job.operation == "ingest":
-                ingest_document(db, document)
+                process_document(db, document)
             else:
                 raise RuntimeError(f"Unsupported durable operation: {job.operation}")
             finish_job(db, job)
+        except NonRetryableProcessingError as exc:
+            job.attempts = job.max_attempts
+            fail_job(db, job, str(exc))
         except Exception as exc:
             logger.warning(
                 "knowledge_job_failed",

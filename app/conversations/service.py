@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.ai.orchestrator import GroundingSource, orchestrate_workspace_turn
 from app.ai.provider import OpenAIResponseProvider
 from app.core.config import settings
-from app.database.genesis_models import Conversation, WorkspaceMessage
+from app.database.genesis_models import Conversation, WorkspaceDocument, WorkspaceMessage
 from app.memory.service import memory_context
 from app.rag.search import search_workspace_documents
 
@@ -42,13 +42,16 @@ def serialize_message(message: WorkspaceMessage) -> dict:
     }
 
 
-def build_grounding(workspace_id: str, text: str) -> list[GroundingSource]:
+def build_grounding(db: Session, workspace_id: str, text: str) -> list[GroundingSource]:
     results = search_workspace_documents(workspace_id, text)
     sources = []
     for document, _score in results:
         metadata = document.metadata
         document_id = metadata.get("document_id")
         if not document_id or metadata.get("workspace_id") != workspace_id:
+            continue
+        persisted = db.get(WorkspaceDocument, document_id)
+        if not persisted or persisted.workspace_id != workspace_id or persisted.status != "indexed":
             continue
         sources.append(
             GroundingSource(
@@ -61,9 +64,9 @@ def build_grounding(workspace_id: str, text: str) -> list[GroundingSource]:
     return sources
 
 
-def build_citations(workspace_id: str, text: str) -> tuple[str, list[dict]]:
+def build_citations(db: Session, workspace_id: str, text: str) -> tuple[str, list[dict]]:
     """Compatibility seam for callers/tests while orchestration owns prompt policy."""
-    sources = build_grounding(workspace_id, text)
+    sources = build_grounding(db, workspace_id, text)
     return "\n\n".join(source.content for source in sources), [
         {
             "document_id": source.document_id,
@@ -106,7 +109,7 @@ def reply_to_conversation(
     db.commit()
 
     try:
-        context, citations = build_citations(workspace_id, text)
+        context, citations = build_citations(db, workspace_id, text)
     except Exception as exc:
         raise HTTPException(
             status_code=503,

@@ -1,6 +1,24 @@
 export const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
 export const ACCEPTED_DOCUMENT_EXTENSIONS = ["pdf", "txt", "docx"];
 
+export const DOCUMENT_STATUS = Object.freeze({
+  uploaded: { label: "Accepté", tone: "pending", retryable: false },
+  pending_scan: { label: "En attente du contrôle", tone: "pending", retryable: false },
+  scanning: { label: "Contrôle de sécurité", tone: "processing", retryable: false },
+  scan_failed: { label: "Contrôle indisponible", tone: "failed", retryable: true },
+  rejected: { label: "Rejeté", tone: "rejected", retryable: false },
+  pending_processing: { label: "En attente d’indexation", tone: "pending", retryable: false },
+  processing: { label: "Indexation", tone: "processing", retryable: false },
+  indexed: { label: "Prêt", tone: "ready", retryable: false },
+  processing_failed: { label: "Indexation échouée", tone: "failed", retryable: true },
+  deleting: { label: "Suppression", tone: "processing", retryable: false },
+  delete_failed: { label: "Suppression incomplète", tone: "failed", retryable: false },
+});
+
+export function documentStatus(status) {
+  return DOCUMENT_STATUS[status] || { label: "État inconnu", tone: "failed", retryable: false };
+}
+
 export function acceptsDocumentResult(activeWorkspaceId, requestWorkspaceId) {
   return Boolean(requestWorkspaceId) && activeWorkspaceId === requestWorkspaceId;
 }
@@ -32,12 +50,5 @@ export function formatDocumentSize(bytes) {
 }
 
 export function documentStatusLabel(status) {
-  return {
-    indexed: "Prêt pour Nova",
-    processing: "Indexation en cours",
-    pending: "En attente",
-    failed: "Indexation échouée",
-    deleting: "Suppression en cours",
-    delete_failed: "Suppression à relancer",
-  }[status] || "État inconnu";
+  return documentStatus(status).label;
 }

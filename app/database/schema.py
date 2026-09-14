@@ -15,7 +15,7 @@ from app.knowledge import models as knowledge_models  # noqa: F401 - register me
 
 BASELINE_REVISION = "0001_genesis_baseline"
 GENESIS_HEAD_REVISION = "0003_workspace_memory"
-HEAD_REVISION = "0009_audit_guard_reconciliation"
+HEAD_REVISION = "0010_document_lifecycle"
 CURRENT_COLUMNS = {
     table.name: {column.name for column in table.columns}
     for table in Base.metadata.sorted_tables

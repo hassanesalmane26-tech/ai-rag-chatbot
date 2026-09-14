@@ -1,6 +1,5 @@
 import hashlib
 import re
-from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
@@ -10,16 +9,25 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.database.genesis_models import WorkspaceDocument, new_id
 from app.database.genesis_models import Workspace
-from app.knowledge.jobs import claim_job, enqueue_ingestion, fail_job, finish_job
-from app.knowledge.storage import LocalObjectStorage
-from app.rag.loader import load_document
-from app.rag.splitter import split_documents
+from app.knowledge.jobs import enqueue_ingestion, requeue_ingestion
+from app.knowledge.models import KnowledgeJob
+from app.knowledge.state import (
+    INDEXED,
+    PENDING_PROCESSING,
+    PENDING_SCAN,
+    PROCESSING_FAILED,
+    RETRYABLE_STATUSES,
+    SCAN_FAILED,
+    canonical_status,
+    status_view,
+    transition_document,
+)
+from app.knowledge.storage import LocalObjectStorage, storage_for_backend
 from app.rag.vectorstore import vectorstore
 
 DOCUMENTS_ROOT = settings.documents_path
 ALLOWED_SUFFIXES = {".pdf", ".txt", ".docx"}
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
-RETRYABLE_STATUSES = {"pending", "processing", "failed"}
 
 
 def _storage() -> LocalObjectStorage:
@@ -34,92 +42,30 @@ def _safe_display_name(filename: str | None) -> str:
     return candidate[:200]
 
 
-def _document_path(document: WorkspaceDocument) -> Path:
-    return _storage().path(document.storage_key or f"{document.workspace_id}/{document.storage_name}")
-
-
-def _chunk_ids(document: WorkspaceDocument, chunks: list) -> list[str]:
-    return [f"{document.id}:v{document.version}:{position}" for position, _chunk in enumerate(chunks)]
-
-
 def _original_matches(document: WorkspaceDocument) -> bool:
-    path = _document_path(document)
-    if not path.is_file():
+    storage = storage_for_backend(document.storage_backend, local_root=DOCUMENTS_ROOT)
+    key = document.storage_key or f"{document.workspace_id}/{document.storage_name}"
+    if not storage.exists(key):
         return False
     if not document.content_hash:
         return True
     digest = hashlib.sha256()
-    with path.open("rb") as source:
-        for block in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(block)
+    with storage.materialize(key) as path:
+        with path.open("rb") as source:
+            for block in iter(lambda: source.read(1024 * 1024), b""):
+                digest.update(block)
     return digest.hexdigest() == document.content_hash
 
 
-def ingest_document(db: Session, document: WorkspaceDocument) -> WorkspaceDocument:
-    """Index one durable original; safe to retry after any partial failure."""
-    storage_key = document.storage_key or f"{document.workspace_id}/{document.storage_name}"
-    document.status = "processing"
-    document.ingestion_attempts = (document.ingestion_attempts or 0) + 1
-    document.error_message = None
-    db.commit()
-    try:
-        with _storage().materialize(storage_key) as destination:
-            chunks = split_documents(load_document(str(destination)))
-        for position, chunk in enumerate(chunks):
-            chunk.metadata.update(
-                {
-                    "workspace_id": document.workspace_id,
-                    "document_id": document.id,
-                    "document_name": document.display_name,
-                    "document_version": document.version,
-                    "content_hash": document.content_hash or "legacy",
-                    "chunk_position": position,
-                }
-            )
-        vectorstore.delete(where={"document_id": document.id})
-        if chunks:
-            vectorstore.add_documents(chunks, ids=_chunk_ids(document, chunks))
-        document.status = "indexed"
-        document.chunk_count = len(chunks)
-        document.indexed_at = datetime.now(timezone.utc)
-        db.commit()
-        db.refresh(document)
-        return document
-    except Exception as exc:
-        db.rollback()
-        durable = db.get(WorkspaceDocument, document.id)
-        if durable:
-            durable.status = "failed"
-            durable.error_message = "Indexation impossible. Une nouvelle tentative est possible."
-            db.commit()
-        raise HTTPException(status_code=503, detail="Le document n’a pas pu être indexé.") from exc
-
-
-def _process_ingestion_job(
-    db: Session, document: WorkspaceDocument, *, manual_retry: bool = False
-) -> WorkspaceDocument:
+def _enqueue_document(db: Session, document: WorkspaceDocument):
     workspace = db.get(Workspace, document.workspace_id)
     if not workspace or not workspace.organization_id:
         raise HTTPException(status_code=409, detail="Le Workspace du document est incohérent.")
     job = enqueue_ingestion(
         db, workspace.organization_id, document.workspace_id, document.id, document.version
     )
-    if manual_retry and job.status in {"queued", "failed"}:
-        job.status = "queued"
-        job.available_at = datetime.now(timezone.utc)
     db.commit()
-    claimed = claim_job(db, job.id, "inline-api")
-    if claimed is None:
-        if job.status == "succeeded" and document.status == "indexed":
-            return document
-        raise HTTPException(status_code=409, detail="L’ingestion du document est déjà en cours.")
-    try:
-        result = ingest_document(db, document)
-        finish_job(db, claimed)
-        return result
-    except HTTPException:
-        fail_job(db, claimed, "Document ingestion failed")
-        raise
+    return job
 
 
 async def create_document(db: Session, workspace_id: str, upload: UploadFile) -> WorkspaceDocument:
@@ -137,14 +83,17 @@ async def create_document(db: Session, workspace_id: str, upload: UploadFile) ->
         .first()
     )
     if existing:
-        if existing.status == "indexed":
+        if canonical_status(existing.status) == INDEXED:
             return existing
         stored = _storage().put(
             existing.storage_key or f"{existing.workspace_id}/{existing.storage_name}", content
         )
         existing.original_etag = stored.etag
         db.commit()
-        return _process_ingestion_job(db, existing)
+        if canonical_status(existing.status) in RETRYABLE_STATUSES:
+            transition_document(existing, PENDING_SCAN)
+        _enqueue_document(db, existing)
+        return existing
 
     storage_name = f"{new_id()}{Path(display_name).suffix.lower()}"
     document = WorkspaceDocument(
@@ -156,7 +105,7 @@ async def create_document(db: Session, workspace_id: str, upload: UploadFile) ->
         media_type=upload.content_type or "application/octet-stream",
         size_bytes=len(content),
         content_hash=content_hash,
-        status="pending",
+        status="uploaded",
     )
     db.add(document)
     try:
@@ -168,14 +117,17 @@ async def create_document(db: Session, workspace_id: str, upload: UploadFile) ->
             .filter_by(workspace_id=workspace_id, content_hash=content_hash)
             .one()
         )
-        if existing.status == "indexed":
+        if canonical_status(existing.status) == INDEXED:
             return existing
         stored = _storage().put(
             existing.storage_key or f"{existing.workspace_id}/{existing.storage_name}", content
         )
         existing.original_etag = stored.etag
         db.commit()
-        return _process_ingestion_job(db, existing)
+        if canonical_status(existing.status) in RETRYABLE_STATUSES:
+            transition_document(existing, PENDING_SCAN)
+        _enqueue_document(db, existing)
+        return existing
     db.refresh(document)
 
     try:
@@ -183,22 +135,36 @@ async def create_document(db: Session, workspace_id: str, upload: UploadFile) ->
         document.original_etag = stored.etag
         db.commit()
     except Exception as exc:
-        document.status = "failed"
+        document.status = PROCESSING_FAILED
         document.error_message = "Stockage de l’original impossible."
         db.commit()
         raise HTTPException(status_code=503, detail="Le document n’a pas pu être stocké.") from exc
-    return _process_ingestion_job(db, document)
+    transition_document(document, PENDING_SCAN)
+    _enqueue_document(db, document)
+    return document
 
 
 def retry_document(db: Session, document: WorkspaceDocument) -> WorkspaceDocument:
-    if document.status not in RETRYABLE_STATUSES:
+    normalized = canonical_status(document.status)
+    if normalized not in RETRYABLE_STATUSES:
         raise HTTPException(status_code=409, detail="Ce document ne nécessite pas de nouvelle tentative.")
     if not _original_matches(document):
-        document.status = "failed"
+        document.status = PROCESSING_FAILED
         document.error_message = "Original introuvable ou incohérent."
         db.commit()
         raise HTTPException(status_code=409, detail="L’original du document est introuvable ou incohérent.")
-    return _process_ingestion_job(db, document, manual_retry=True)
+    target = PENDING_SCAN if normalized == SCAN_FAILED else PENDING_PROCESSING
+    job = _enqueue_document(db, document)
+    if job.attempts >= job.max_attempts:
+        raise HTTPException(status_code=409, detail="Le nombre maximal de tentatives est atteint.")
+    transition_document(document, target)
+    try:
+        requeue_ingestion(db, job)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Le nombre maximal de tentatives est atteint.") from exc
+    db.refresh(document)
+    return document
 
 
 def delete_document(db: Session, document: WorkspaceDocument) -> None:
@@ -207,7 +173,9 @@ def delete_document(db: Session, document: WorkspaceDocument) -> None:
     db.commit()
     try:
         vectorstore.delete(where={"document_id": document.id})
-        _storage().delete(document.storage_key or f"{document.workspace_id}/{document.storage_name}")
+        storage = storage_for_backend(document.storage_backend, local_root=DOCUMENTS_ROOT)
+        storage.delete(document.storage_key or f"{document.workspace_id}/{document.storage_name}")
+        db.query(KnowledgeJob).filter_by(document_id=document.id).delete(synchronize_session=False)
         db.delete(document)
         db.commit()
     except Exception as exc:
@@ -224,12 +192,18 @@ def read_document_original(document: WorkspaceDocument) -> bytes:
     """Read one already-authorized original through the storage boundary."""
     storage_key = document.storage_key or f"{document.workspace_id}/{document.storage_name}"
     try:
-        return _storage().read(storage_key)
+        storage = storage_for_backend(document.storage_backend, local_root=DOCUMENTS_ROOT)
+        return storage.read(storage_key)
     except (OSError, ValueError) as exc:
         raise HTTPException(status_code=404, detail="Le fichier original est introuvable.") from exc
 
 
-def serialize_document(document: WorkspaceDocument) -> dict:
+def serialize_document(document: WorkspaceDocument, db: Session | None = None) -> dict:
+    lifecycle = status_view(document.status)
+    job = db.query(KnowledgeJob).filter_by(
+        idempotency_key=f"ingest:{document.id}:v{document.version}"
+    ).one_or_none() if db is not None else None
+    retryable = lifecycle.retryable and (job is None or job.attempts < job.max_attempts)
     return {
         "id": document.id,
         "workspace_id": document.workspace_id,
@@ -238,7 +212,13 @@ def serialize_document(document: WorkspaceDocument) -> dict:
         "size_bytes": document.size_bytes,
         "storage_backend": document.storage_backend,
         "version": document.version,
-        "status": document.status,
+        "status": lifecycle.status,
+        "ready": lifecycle.ready,
+        "retryable": retryable,
+        "processing": {
+            "attempts": job.attempts if job else document.ingestion_attempts,
+            "max_attempts": job.max_attempts if job else None,
+        },
         "ingestion_attempts": document.ingestion_attempts,
         "chunk_count": document.chunk_count,
         "error_message": document.error_message,

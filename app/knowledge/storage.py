@@ -24,6 +24,15 @@ class ObjectStorage(Protocol):
     def materialize(self, key: str): ...
 
 
+def storage_for_backend(backend: str, *, local_root: Path) -> ObjectStorage:
+    """Resolve a configured storage boundary without vendor coupling."""
+    if backend == "local":
+        return LocalObjectStorage(local_root)
+    if backend == "s3-compatible":
+        return S3CompatibleObjectStorage()
+    raise RuntimeError(f"Unsupported object storage backend: {backend}")
+
+
 class LocalObjectStorage:
     """Durable local adapter retained for the current single-node deployment."""
     def __init__(self, root: Path): self.root = root

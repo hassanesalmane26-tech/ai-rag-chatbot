@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   MAX_DOCUMENT_BYTES,
   acceptsDocumentResult,
+  documentStatus,
   documentStatusLabel,
   formatDocumentSize,
   prependDocument,
@@ -36,6 +37,8 @@ test("formats document metadata for human-readable cards", () => {
   assert.equal(formatDocumentSize(900), "900 o");
   assert.equal(formatDocumentSize(1536), "2 Ko");
   assert.equal(formatDocumentSize(1572864), "1.5 Mo");
-  assert.equal(documentStatusLabel("indexed"), "Prêt pour Nova");
-  assert.equal(documentStatusLabel("failed"), "Indexation échouée");
+  assert.equal(documentStatusLabel("indexed"), "Prêt");
+  assert.equal(documentStatusLabel("scan_failed"), "Contrôle indisponible");
+  assert.equal(documentStatus("processing_failed").retryable, true);
+  assert.equal(documentStatus("rejected").retryable, false);
 });
