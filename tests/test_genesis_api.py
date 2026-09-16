@@ -434,6 +434,52 @@ class GenesisApiTests(unittest.TestCase):
         self.assertIn("TRIDENT est Workspace-centric.", provider_input[0]["content"])
         self.assertIn("données non fiables", provider_input[0]["content"])
 
+    def test_inactive_memory_is_not_injected_into_nova(self):
+        workspace = self.workspace("Inactive Memory")
+        conversation = self.client.post(
+            f"/v1/workspaces/{workspace['id']}/conversations", json={}
+        ).json()["data"]
+        memory = self.client.post(
+            f"/v1/workspaces/{workspace['id']}/memories",
+            json={"kind": "fact", "title": "Privée", "content": "NE-PAS-INJECTER"},
+        ).json()["data"]
+        disabled = self.client.patch(
+            f"/v1/workspaces/{workspace['id']}/memories/{memory['id']}",
+            json={"active": False},
+        )
+        self.assertEqual(disabled.status_code, 200, disabled.text)
+        provider = MagicMock()
+        provider.return_value.responses.create.return_value.output_text = "Sans mémoire."
+        with patch("app.conversations.service.build_citations", return_value=("", [])), patch(
+            "app.conversations.service.OpenAI", provider
+        ):
+            response = self.client.post(
+                f"/v1/workspaces/{workspace['id']}/conversations/{conversation['id']}/messages",
+                json={"content": "Réponds sans contexte mémoire."},
+            )
+        self.assertEqual(response.status_code, 201, response.text)
+        provider_input = provider.return_value.responses.create.call_args.kwargs["input"]
+        self.assertNotIn("NE-PAS-INJECTER", provider_input[0]["content"])
+        self.assertIn("Aucune mémoire explicite", provider_input[0]["content"])
+
+    def test_memory_read_failure_degrades_to_empty_context(self):
+        workspace = self.workspace("Unavailable Memory")
+        conversation = self.client.post(
+            f"/v1/workspaces/{workspace['id']}/conversations", json={}
+        ).json()["data"]
+        provider = MagicMock()
+        provider.return_value.responses.create.return_value.output_text = "Disponible."
+        with patch("app.conversations.service.build_citations", return_value=("", [])), patch(
+            "app.conversations.service.memory_context", side_effect=RuntimeError("database unavailable")
+        ), patch("app.conversations.service.OpenAI", provider):
+            response = self.client.post(
+                f"/v1/workspaces/{workspace['id']}/conversations/{conversation['id']}/messages",
+                json={"content": "Nova reste-t-elle disponible ?"},
+            )
+        self.assertEqual(response.status_code, 201, response.text)
+        provider_input = provider.return_value.responses.create.call_args.kwargs["input"]
+        self.assertIn("Aucune mémoire explicite", provider_input[0]["content"])
+
     def test_message_rejects_blank_content_and_cross_workspace_access(self):
         first, second = self.workspace("Premier"), self.workspace("Second")
         conversation = self.client.post(f"/v1/workspaces/{first['id']}/conversations", json={}).json()["data"]

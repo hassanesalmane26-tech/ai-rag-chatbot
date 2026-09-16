@@ -130,3 +130,19 @@ test("command and product onboarding dialogs are keyboard dismissable", () => {
   assert.match(modalFocus, /event\.key !== "Tab"/);
   assert.match(modalFocus, /previousFocus/);
 });
+
+test("TRIDENT Command uses one accessible interaction surface on mobile and desktop", () => {
+  const layout = readFileSync(new URL("src/app/layout/MainLayout.jsx", root), "utf8");
+  const header = readFileSync(new URL("src/components/navigation/Header.jsx", root), "utf8");
+  const command = readFileSync(new URL("src/components/command/CommandPalette.jsx", root), "utf8");
+  const responsive = readFileSync(new URL("src/styles/definitive.css", root), "utf8");
+  assert.match(layout, /<CommandPalette open=\{isCommandOpen\}/);
+  assert.match(layout, /metaKey \|\| event\.ctrlKey/);
+  assert.match(header, /aria-label="Ouvrir TRIDENT Command"/);
+  assert.match(header, /aria-haspopup="dialog"/);
+  assert.match(command, /data-command-state=\{surfaceState\}/);
+  assert.match(command, /aria-busy=\{loading\}/);
+  assert.match(command, /role="alert"/);
+  assert.match(responsive, /\.topbar-command \{ flex:0 0 38px;/);
+  assert.doesNotMatch(responsive, /\.topbar-command \{ display:none;/);
+});

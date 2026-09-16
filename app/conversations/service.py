@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
@@ -11,6 +12,8 @@ from app.core.config import settings
 from app.database.genesis_models import Conversation, WorkspaceDocument, WorkspaceMessage
 from app.memory.service import memory_context
 from app.rag.search import search_workspace_documents
+
+logger = logging.getLogger("trident.conversations")
 
 
 def create_conversation(db: Session, workspace_id: str, title: str | None = None) -> Conversation:
@@ -115,7 +118,16 @@ def reply_to_conversation(
             status_code=503,
             detail="La recherche dans les connaissances est temporairement indisponible.",
         ) from exc
-    memories = memory_context(db, workspace_id, conversation.id)
+    try:
+        memories = memory_context(db, workspace_id, conversation.id)
+    except Exception:
+        # Memory is optional context. Never reuse stale context and never make
+        # Nova unavailable solely because this bounded read failed.
+        logger.warning(
+            "workspace_memory_unavailable",
+            extra={"workspace_id": workspace_id, "conversation_id": conversation.id},
+        )
+        memories = ""
     sources = [
         GroundingSource(
             document_id=citation["document_id"],
