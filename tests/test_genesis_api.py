@@ -222,6 +222,30 @@ class GenesisApiTests(unittest.TestCase):
         self.assertNotIn("actor_user_id", activity.json()["data"][0])
         self.assertNotIn("metadata", activity.json()["data"][0])
         self.assertEqual(self.client.get(f"/v1/workspaces/{second['id']}/activity").json()["data"][0]["label"], "Workspace créé")
+        first_page = self.client.get(f"/v1/workspaces/{first['id']}/activity?limit=1&offset=0")
+        self.assertEqual(first_page.status_code, 200, first_page.text)
+        self.assertEqual(len(first_page.json()["data"]), 1)
+        self.assertTrue(first_page.json()["meta"]["pagination"]["has_more"])
+        all_events = activity.json()["data"]
+        ordering = [(event["created_at"], event["id"]) for event in all_events]
+        self.assertEqual(ordering, sorted(ordering, reverse=True))
+
+    def test_workspace_settings_description_persists_and_rejects_invalid_updates(self):
+        workspace = self.workspace("Settings owner")
+        saved = self.client.patch(
+            f"/v1/workspaces/{workspace['id']}", json={"description": "Persisted setting"}
+        )
+        self.assertEqual(saved.status_code, 200, saved.text)
+        refreshed = self.client.get(f"/v1/workspaces/{workspace['id']}")
+        self.assertEqual(refreshed.json()["data"]["description"], "Persisted setting")
+        invalid = self.client.patch(
+            f"/v1/workspaces/{workspace['id']}", json={"description": "x" * 1001}
+        )
+        self.assertEqual(invalid.status_code, 422, invalid.text)
+        self.assertEqual(
+            self.client.get(f"/v1/workspaces/{workspace['id']}").json()["data"]["description"],
+            "Persisted setting",
+        )
 
     def test_list_contracts_are_bounded_and_paginated(self):
         self.workspace("First")

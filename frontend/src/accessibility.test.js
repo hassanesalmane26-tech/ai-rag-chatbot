@@ -146,3 +146,12 @@ test("TRIDENT Command uses one accessible interaction surface on mobile and desk
   assert.match(responsive, /\.topbar-command \{ flex:0 0 38px;/);
   assert.doesNotMatch(responsive, /\.topbar-command \{ display:none;/);
 });
+
+test("Activity, Artifacts and Settings remain reachable on mobile and desktop", () => {
+  const registry = readFileSync(new URL("src/app/modules/registry.jsx", root), "utf8");
+  const sidebar = readFileSync(new URL("src/components/Sidebar.jsx", root), "utf8");
+  const mobileMenu = readFileSync(new URL("src/components/workspace/MobileWorkspaceSelector.jsx", root), "utf8");
+  for (const moduleId of ["activity", "artifacts", "settings"]) assert.match(registry, new RegExp(`id: "${moduleId}"`));
+  assert.match(sidebar, /workspaceModules/);
+  assert.match(mobileMenu, /workspaceModules\.map/);
+});
