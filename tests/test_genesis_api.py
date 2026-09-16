@@ -39,6 +39,7 @@ from app.conversations.service import build_grounding
 from app.rag.search import search_workspace_documents
 from app.modules.registry import modules_for_edition
 from app.governance.rate_limit import FixedWindowRateLimiter
+from app.governance.models import EntitlementGrant
 from app.tenancy.models import Membership, MembershipRole, Organization
 
 engine = create_engine(os.environ["DATABASE_URL"], connect_args={"check_same_thread": False})
@@ -812,6 +813,12 @@ class GenesisApiTests(unittest.TestCase):
                         user_id=other_user.id,
                         organization_id=other_organization.id,
                         role=MembershipRole.OWNER.value,
+                    ),
+                    EntitlementGrant(
+                        user_id=other_user.id,
+                        key="ecosystem.full_access",
+                        integer_value=1,
+                        source="founder",
                     ),
                 ]
             )

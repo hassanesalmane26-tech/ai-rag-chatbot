@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.product import TRIDENT_PRODUCT
 from app.database.database import Base
+from app.database.genesis_models import Workspace  # noqa: F401
 from app.governance.audit import verify_audit_chain
 from app.governance.founder import (
     FOUNDER_ENTITLEMENT,
@@ -15,7 +16,14 @@ from app.governance.founder import (
     plan_founder_bootstrap,
     revoke_founder_entitlement,
 )
-from app.governance.entitlements import has_capability
+from app.governance.entitlements import (
+    NOVA_TRIDENT,
+    TRIDENT_AI,
+    TRIDENT_PRO,
+    can_access_edition,
+    has_capability,
+    resolve_edition_access,
+)
 from app.governance.models import AuditEvent, EntitlementGrant
 from app.identity.contracts import AuthenticatedPrincipal
 from app.identity.models import ExternalIdentity, User
@@ -132,6 +140,80 @@ class FounderEntitlementSecurityTests(unittest.TestCase):
         self.assertEqual([event.action for event in events], ["founder.entitlement_granted"])
         self.assertEqual(events[0].request_id, "request-founder-1")
         self.assertTrue(verify_audit_chain(events))
+
+    def test_founder_resolves_all_editions_independently_of_subscription(self):
+        self.make_owner()
+        assign_founder_entitlement(
+            self.db,
+            principal=self.principal,
+            organization_id=self.organization.id,
+            approval_reference="OWNER-APPROVAL-001",
+        )
+        self.db.add(
+            EntitlementGrant(
+                organization_id=self.organization.id,
+                key="edition.trident_pro.access",
+                integer_value=1,
+                source="plan",
+            )
+        )
+        self.db.commit()
+        resolution = resolve_edition_access(self.db, self.principal, self.organization.id)
+        self.assertTrue(resolution.founder)
+        self.assertEqual(
+            [(item.edition, item.allowed, item.source) for item in resolution.editions],
+            [
+                (TRIDENT_AI, True, "founder"),
+                (TRIDENT_PRO, True, "founder"),
+                (NOVA_TRIDENT, True, "founder"),
+            ],
+        )
+        self.db.query(EntitlementGrant).filter_by(source="plan").delete()
+        self.db.commit()
+        for edition in (TRIDENT_AI, TRIDENT_PRO, NOVA_TRIDENT):
+            self.assertTrue(
+                can_access_edition(self.db, self.principal, self.organization.id, edition)
+            )
+
+    def test_normal_subscription_resolution_and_unknown_editions_fail_safely(self):
+        self.make_owner()
+        self.db.add(
+            EntitlementGrant(
+                organization_id=self.organization.id,
+                key="edition.trident_pro.access",
+                integer_value=1,
+                source="plan",
+            )
+        )
+        self.db.commit()
+        resolution = resolve_edition_access(self.db, self.principal, self.organization.id)
+        self.assertFalse(resolution.founder)
+        self.assertEqual(
+            [(item.edition, item.allowed, item.source) for item in resolution.editions],
+            [
+                (TRIDENT_AI, True, "core"),
+                (TRIDENT_PRO, True, "plan"),
+                (NOVA_TRIDENT, False, None),
+            ],
+        )
+        self.assertFalse(
+            can_access_edition(self.db, self.principal, self.organization.id, "UNKNOWN")
+        )
+
+    def test_founder_entitlement_never_creates_cross_tenant_access(self):
+        self.make_owner()
+        assign_founder_entitlement(
+            self.db,
+            principal=self.principal,
+            organization_id=self.organization.id,
+            approval_reference="OWNER-APPROVAL-001",
+        )
+        foreign = Organization(name="Foreign", slug="foreign", ownership_state="active")
+        self.db.add(foreign)
+        self.db.commit()
+        resolution = resolve_edition_access(self.db, self.principal, foreign.id)
+        self.assertFalse(resolution.founder)
+        self.assertTrue(all(not item.allowed for item in resolution.editions))
 
     def test_revocation_requires_owner_and_preserves_evidence(self):
         self.make_owner()

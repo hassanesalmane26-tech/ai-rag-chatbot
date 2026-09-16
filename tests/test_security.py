@@ -20,6 +20,7 @@ from app.identity.contracts import VerifiedExternalIdentity
 from app.identity.contracts import AuthenticatedPrincipal
 from app.identity.models import ExternalIdentity, User
 from app.database.genesis_models import Workspace
+from app.governance.models import EntitlementGrant
 from app.identity.session_service import create_session, validate_session, utcnow
 from app.main import create_app
 from app.tenancy.models import Membership, MembershipRole, Organization
@@ -231,6 +232,10 @@ class SessionLifecycleTests(unittest.TestCase):
                 current = await client.get("/v1/session")
                 self.assertEqual(current.status_code, 200, current.text)
                 self.assertEqual(current.json()["data"]["organizations"][0]["id"], self.organization_id)
+                self.assertEqual(
+                    current.json()["data"]["edition_access"],
+                    {"founder": False, "editions": []},
+                )
 
                 denied = await client.post(
                     "/v1/session/context",
@@ -246,6 +251,28 @@ class SessionLifecycleTests(unittest.TestCase):
                 self.assertEqual(selected.status_code, 200, selected.text)
                 self.assertEqual(selected.json()["data"]["active_organization_id"], self.organization_id)
                 self.assertEqual(selected.json()["data"]["active_workspace_id"], self.workspace_id)
+                self.assertEqual(
+                    selected.json()["data"]["edition_access"],
+                    {
+                        "founder": False,
+                        "editions": [
+                            {"edition": "TRIDENT_AI", "allowed": True, "source": "core"},
+                            {"edition": "TRIDENT_PRO", "allowed": False, "source": None},
+                            {"edition": "NOVA_TRIDENT", "allowed": False, "source": None},
+                        ],
+                    },
+                )
+                forged = await client.post(
+                    "/v1/session/context",
+                    json={
+                        "organization_id": self.organization_id,
+                        "workspace_id": self.workspace_id,
+                        "founder": True,
+                        "edition_access": ["NOVA_TRIDENT"],
+                    },
+                    headers={"X-CSRF-Token": csrf},
+                )
+                self.assertEqual(forged.status_code, 422, forged.text)
                 visible = await client.get("/v1/workspaces")
                 self.assertEqual([item["id"] for item in visible.json()["data"]], [self.workspace_id])
 
@@ -291,6 +318,52 @@ class SessionLifecycleTests(unittest.TestCase):
 
     def test_first_login_onboards_and_selects_personal_workspace(self):
         asyncio.run(self.first_login_scenario())
+
+    async def founder_edition_scenario(self):
+        db = self.Session()
+        user = db.query(User).filter_by().one()
+        db.add(
+            EntitlementGrant(
+                user_id=user.id,
+                key="ecosystem.full_access",
+                integer_value=1,
+                source="founder",
+            )
+        )
+        db.commit()
+        db.close()
+
+        transport = httpx.ASGITransport(app=self.application, raise_app_exceptions=False)
+        async with self.application.router.lifespan_context(self.application):
+            async with httpx.AsyncClient(
+                transport=transport, base_url="http://test", follow_redirects=False
+            ) as client:
+                started = await client.post("/v1/session/login", json={"return_to": "/"})
+                state = started.json()["data"]["authorization_url"].split("state=")[1]
+                callback = await client.get(
+                    "/v1/session/callback", params={"code": "valid-code", "state": state}
+                )
+                self.assertEqual(callback.status_code, 303, callback.text)
+                csrf = client.cookies.get("trident_csrf")
+                selected = await client.post(
+                    "/v1/session/context",
+                    json={"organization_id": self.organization_id, "workspace_id": self.workspace_id},
+                    headers={"X-CSRF-Token": csrf},
+                )
+                self.assertEqual(selected.status_code, 200, selected.text)
+                access = selected.json()["data"]["edition_access"]
+                self.assertTrue(access["founder"])
+                self.assertEqual(
+                    [(item["edition"], item["allowed"], item["source"]) for item in access["editions"]],
+                    [
+                        ("TRIDENT_AI", True, "founder"),
+                        ("TRIDENT_PRO", True, "founder"),
+                        ("NOVA_TRIDENT", True, "founder"),
+                    ],
+                )
+
+    def test_session_exposes_only_server_resolved_founder_edition_access(self):
+        asyncio.run(self.founder_edition_scenario())
 
     def test_expired_and_revoked_sessions_fail_closed(self):
         db = self.Session()

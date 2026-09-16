@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, RedirectResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.core.errors import AuthenticationConfigurationError, AuthenticationError, AuthorizationError
@@ -10,6 +10,7 @@ from app.database.database import get_db
 from app.identity.contracts import AuthenticatedPrincipal, InvalidIdentityCredential
 from app.identity.service import resolve_or_create_principal
 from app.governance.audit import append_audit_event
+from app.governance.entitlements import resolve_edition_access
 from app.identity.session_service import (
     CSRF_COOKIE,
     SESSION_COOKIE,
@@ -29,10 +30,12 @@ router = APIRouter(prefix="/v1/session", tags=["Session"])
 
 
 class LoginInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     return_to: str = Field(default="/", max_length=512)
 
 
 class ContextInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     organization_id: str = Field(min_length=36, max_length=36)
     workspace_id: str | None = Field(default=None, min_length=36, max_length=36)
 
@@ -63,6 +66,11 @@ def session_payload(request: Request, db: Session, principal: AuthenticatedPrinc
     active_workspace_id = getattr(application_session, "active_workspace_id", None)
     if active_workspace_id not in workspace_ids:
         active_workspace_id = None
+    edition_access = (
+        resolve_edition_access(db, principal, active_organization_id).public_dict()
+        if active_organization_id
+        else {"founder": False, "editions": []}
+    )
     return {
         "data": {
             "authenticated": True,
@@ -70,6 +78,7 @@ def session_payload(request: Request, db: Session, principal: AuthenticatedPrinc
             "organizations": organizations,
             "active_organization_id": active_organization_id,
             "active_workspace_id": active_workspace_id,
+            "edition_access": edition_access,
             "expires_at": (
                 application_session.expires_at.isoformat() if application_session else None
             ),

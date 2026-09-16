@@ -21,6 +21,14 @@ can already access. It never creates Membership or bypasses Workspace checks.
 Billing may add plan grants independently; a Founder grant remains explicit and
 auditable rather than being encoded as a special subscription.
 
+`app.governance.entitlements.resolve_edition_access` is the canonical edition
+resolver. It reports TRIDENT AI core access, explicit plan grants for TRIDENT
+PRO or NOVA TRIDENT, and the permanent Founder source separately. The active
+session exposes this server-authored resolution for the selected Organization;
+clients cannot submit or override Founder or edition fields. Unknown editions
+fail closed. Resolution always requires an active Membership and therefore does
+not grant cross-tenant access.
+
 ## Readiness and activation
 
 No claim is active. Once the real OIDC identity has completed cryptographic
