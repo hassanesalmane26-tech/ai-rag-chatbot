@@ -1423,6 +1423,13 @@
     will-change:auto;
   }
 
+  .nova-ready__identity>.trident-mark,
+  .nova-ready__core::before,
+  .nova-ready__core>i:nth-child(3),
+  .nova-ready__core .trident-mark__aura {
+    animation:none !important;
+  }
+
   .trident-environment__world-art { opacity:.7; }
   .trident-environment__scene-art { mix-blend-mode:normal; }
   .trident-environment__scene-art--far { opacity:.045; }
