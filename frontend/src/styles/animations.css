@@ -72,3 +72,35 @@
 @media(max-width:1024px){.trident-environment__vault{width:30vw;opacity:.12}.trident-environment__portal{top:28%;width:46vw}.trident-environment__floor{opacity:.26}}
 @media(max-width:760px){.trident-environment__vault{display:block;top:10%;width:42vw;min-width:150px;opacity:.09}.trident-environment__portal{top:17%;width:88vw;opacity:.42}.trident-environment__floor{bottom:-20%;height:50%;background-size:48px 38px;opacity:.23}.trident-environment__constellations{inset:8% 3% 54%;opacity:.25}.trident-environment__constellations i:nth-child(3){display:none}.trident-environment__clouds--low{bottom:12%;opacity:.17}.trident-environment__foreground{height:19%;opacity:.24}}
 @media(prefers-reduced-motion:reduce){.trident-environment__portal{animation:none}}
+
+/* iOS compositing budget: the decorative world remains present, but mobile
+   scrolling never has to continuously rasterise its largest atmospheric layers. */
+@media (max-width:760px) {
+  .trident-environment,
+  .trident-environment *,
+  .trident-orb,
+  .trident-particles i {
+    animation:none !important;
+    will-change:auto;
+  }
+
+  .trident-environment__beam,
+  .trident-orb,
+  .trident-environment__orbit,
+  .trident-environment__portal,
+  .trident-environment__world,
+  .trident-environment__grid,
+  .trident-environment__architecture,
+  .trident-environment__vault,
+  .trident-environment__horizon,
+  .trident-environment__sanctuary,
+  .trident-particles {
+    display:none;
+  }
+
+  .trident-environment__clouds,
+  .trident-environment__mist,
+  .trident-environment__moon {
+    filter:none;
+  }
+}
