@@ -1329,3 +1329,79 @@
 @media (prefers-reduced-motion:reduce) {
   .trident-environment__world-art { animation:none; transform:none; }
 }
+
+/* Production mobile polish — preserve the celestial world while giving real content a calm, readable plane. */
+@media (max-width:760px) {
+  .main-layout--nova .conversation-panel,
+  .main-layout--nova .conversation-panel > header,
+  .main-layout--nova .message-list,
+  .main-layout--nova .message-composer,
+  .conversation-panel--active .workspace-message,
+  .conversation-panel--active .citations { min-width:0; max-width:100%; }
+  .main-layout--nova .conversation-panel > header { display:grid; gap:3px; background:linear-gradient(180deg,rgba(4,25,57,.74),rgba(4,25,57,.42)); backdrop-filter:blur(10px) saturate(112%); -webkit-backdrop-filter:blur(10px) saturate(112%); }
+  .main-layout--nova .conversation-panel > header h2 { min-width:0; overflow:hidden; color:rgba(240,249,255,.96); text-overflow:ellipsis; white-space:nowrap; }
+  .main-layout--nova .message-list { overflow-x:hidden; background:linear-gradient(90deg,rgba(3,20,49,.1),rgba(8,34,72,.18),rgba(3,20,49,.1)); }
+  .conversation-panel--active .workspace-message,
+  .conversation-panel--active .workspace-message p,
+  .conversation-panel--active .workspace-message pre,
+  .conversation-panel--active .workspace-message code { min-width:0; max-width:100%; overflow-wrap:anywhere; word-break:break-word; }
+  .conversation-panel--active .workspace-message p { color:rgba(237,246,255,.95); }
+  .conversation-panel--active .workspace-message span { color:rgba(135,239,245,.92); }
+  .conversation-panel--active .citations { display:grid; gap:6px; }
+  .conversation-panel--active .citations small { display:block; min-width:0; overflow:visible; padding:6px 9px; color:rgba(187,232,255,.92); overflow-wrap:anywhere; text-overflow:clip; white-space:normal; }
+  .main-layout--nova .message-composer { width:auto; margin-inline:4px; border-color:rgba(155,230,255,.22); background:linear-gradient(145deg,rgba(6,34,74,.86),rgba(5,22,54,.78)); box-shadow:inset 0 1px rgba(255,255,255,.08),0 12px 32px rgba(0,8,31,.25); }
+  .main-layout--nova .message-composer input { min-width:0; width:100%; color:rgba(244,250,255,.96); }
+  .main-layout--nova .message-composer input::placeholder { color:rgba(202,224,241,.7); }
+}
+
+/* Viewport management: the world frames Nova, never competes with the active task. */
+@supports (height:100dvh) {
+  .main-layout { min-height:100dvh; }
+}
+
+@media (max-width:760px) {
+  .main-layout--nova,
+  .main-layout--nova .main-content { min-height:100dvh; }
+
+  .main-layout--nova .workspace,
+  .main-layout--nova .workspace-container,
+  .main-layout--nova .conversation-layout { min-height:0; }
+
+  .main-layout--nova .conversation-layout:has(.conversation-panel--active) {
+    grid-template-rows:minmax(0,1fr);
+    height:100%;
+  }
+
+  .main-layout--nova .conversation-panel--active { min-height:0; }
+  .main-layout--nova .conversation-panel--active::after { opacity:.16; }
+  .conversation-panel--active>header { padding:6px 12px; }
+  .conversation-panel--active .message-list {
+    gap:12px;
+    padding:10px 12px;
+    scroll-padding-bottom:calc(74px + env(safe-area-inset-bottom));
+  }
+  .conversation-panel--active .workspace-message { margin-block:0; }
+  .main-layout--nova .conversation-panel--active + .message-composer,
+  .main-layout--nova .conversation-panel:has(.message-list) .message-composer {
+    margin-top:4px;
+  }
+  .main-layout--nova .message-composer { margin-bottom:max(4px,env(safe-area-inset-bottom)); }
+
+  @supports selector(.workspace:has(.product-view)) {
+    .workspace:has(.product-view),
+    .workspace:has(.knowledge-view),
+    .workspace:has(.memory-view),
+    .workspace:has(.activity-view),
+    .workspace:has(.settings-view) {
+      padding:9px var(--layout-mobile-gutter) max(10px,env(safe-area-inset-bottom));
+      scroll-padding-bottom:calc(56px + env(safe-area-inset-bottom));
+    }
+    .workspace:has(.product-view) .product-view { padding-bottom:4px; }
+    .workspace:has(.product-view) .product-view__header { margin-bottom:10px; padding-bottom:9px; }
+  }
+}
+
+@media (min-width:1100px) {
+  .main-layout--nova .workspace-container { max-width:none; }
+  .main-layout--nova .conversation-layout { min-height:calc(100dvh - 116px); }
+}
