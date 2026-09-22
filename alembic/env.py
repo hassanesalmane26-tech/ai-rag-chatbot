@@ -8,6 +8,7 @@ from app.database.database import Base
 from app.database import genesis_models, models  # noqa: F401
 from app.identity import models as identity_models  # noqa: F401
 from app.tenancy import models as tenancy_models  # noqa: F401
+from app.images import models as image_models  # noqa: F401
 
 config = context.config
 migration_url = config.get_main_option("sqlalchemy.url")

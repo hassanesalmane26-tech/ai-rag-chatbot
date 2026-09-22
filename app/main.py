@@ -1,6 +1,7 @@
 """TRIDENT FastAPI application factory and lifecycle."""
 
 import logging
+import asyncio
 import os
 import re
 import time
@@ -30,6 +31,9 @@ from app.governance.router import router as governance_router
 from app.governance.workspace_router import router as workspace_activity_router
 from app.memory.router import router as memory_router
 from app.modules.router import router as modules_router
+from app.images.router import router as images_router
+from app.images.provider import configured_provider
+from app.images.worker import image_worker
 
 logger = logging.getLogger("trident.api")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{8,128}$")
@@ -65,9 +69,15 @@ def create_app(
         configure_logging(runtime_settings.log_level)
         application.state.started_at = time.time()
         logger.info("application_started", extra={"event_name": "application_started"})
+        image_stop = asyncio.Event()
+        provider = configured_provider(runtime_settings)
+        image_task = asyncio.create_task(image_worker(database_engine, runtime_settings, provider, image_stop)) if provider else None
         try:
             yield
         finally:
+            image_stop.set()
+            if image_task:
+                await image_task
             database_engine.dispose()
             logger.info("application_stopped", extra={"event_name": "application_stopped"})
 
@@ -286,6 +296,7 @@ def create_app(
     application.include_router(genesis_router)
     application.include_router(memory_router)
     application.include_router(modules_router)
+    application.include_router(images_router)
     return application
 
 

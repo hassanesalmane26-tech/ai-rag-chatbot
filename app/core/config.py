@@ -49,6 +49,10 @@ class Settings(BaseSettings):
         default="text-embedding-3-small",
         validation_alias=AliasChoices("TRIDENT_OPENAI_EMBEDDING_MODEL", "OPENAI_EMBEDDING_MODEL"),
     )
+    image_provider: Literal["disabled", "openai"] = Field(default="disabled", validation_alias="TRIDENT_IMAGE_PROVIDER")
+    image_model: str = Field(default="gpt-image-1", min_length=1, max_length=120, validation_alias="TRIDENT_IMAGE_MODEL")
+    images_path: Path | None = Field(default=None, validation_alias="TRIDENT_IMAGES_PATH")
+    image_timeout_seconds: float = Field(default=180, ge=10, le=300, validation_alias="TRIDENT_IMAGE_TIMEOUT_SECONDS")
     provider_timeout_seconds: float = Field(
         default=60.0,
         gt=0,

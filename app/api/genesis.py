@@ -11,6 +11,9 @@ from app.api.contracts import PageParams, page_meta
 from app.database.database import get_db
 from app.database.genesis_models import Conversation, Workspace, WorkspaceDocument, WorkspaceMessage
 from app.identity.contracts import AuthenticatedPrincipal
+from app.images.contracts import image_intent, image_edit_intent
+from app.images.models import ImageArtifact
+from app.images.service import enqueue_image, serialize_artifact
 from app.governance.audit import append_audit_event
 from app.governance.quotas import consume_hourly_quota, enforce_resource_quota
 from app.knowledge.service import (
@@ -54,6 +57,7 @@ class ConversationInput(BaseModel):
 
 class MessageInput(BaseModel):
     content: str = Field(min_length=1, max_length=12000)
+    request_key: str | None = Field(default=None, min_length=1, max_length=64)
 
 
 def data(value, meta: dict | None = None):
@@ -230,6 +234,17 @@ def send_message(
     principal: AuthenticatedPrincipal = Depends(require_principal),
 ):
     conversation = get_conversation(workspace_id, conversation_id, db)
+    create_intent = image_intent(payload.content)
+    edit_source = None
+    if not create_intent and image_edit_intent(payload.content):
+        edit_source = db.query(ImageArtifact).filter_by(workspace_id=workspace_id, conversation_id=conversation_id, status="completed").order_by(ImageArtifact.created_at.desc(), ImageArtifact.id.desc()).first()
+        if edit_source is None:
+            raise HTTPException(409, "Sélectionnez ou joignez une image à modifier dans Nova.")
+    if create_intent or edit_source:
+        item = enqueue_image(db, tenant, conversation_id, payload.content, edit_source.aspect_ratio if edit_source else "1:1", payload.request_key or request.state.request_id, request.app.state.runtime_settings, source_id=edit_source.id if edit_source else None)
+        assistant = db.get(WorkspaceMessage, item.message_id)
+        return data({**serialize_message(assistant), "image": serialize_artifact(item, principal.user_id),
+                     "user_message": serialize_message(db.get(WorkspaceMessage, item.user_message_id))})
     consume_hourly_quota(db, principal, tenant.organization_id, "messages.per_hour")
     try:
         user_message, assistant_message = reply_to_conversation(

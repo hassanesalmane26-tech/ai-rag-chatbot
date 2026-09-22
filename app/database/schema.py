@@ -12,10 +12,11 @@ from app.identity import session_models as identity_session_models  # noqa: F401
 from app.tenancy import models as tenancy_models  # noqa: F401 - register metadata
 from app.governance import models as governance_models  # noqa: F401 - register metadata
 from app.knowledge import models as knowledge_models  # noqa: F401 - register metadata
+from app.images import models as image_models  # noqa: F401 - register metadata
 
 BASELINE_REVISION = "0001_genesis_baseline"
 GENESIS_HEAD_REVISION = "0003_workspace_memory"
-HEAD_REVISION = "0010_document_lifecycle"
+HEAD_REVISION = "0011_workspace_images"
 CURRENT_COLUMNS = {
     table.name: {column.name for column in table.columns}
     for table in Base.metadata.sorted_tables
