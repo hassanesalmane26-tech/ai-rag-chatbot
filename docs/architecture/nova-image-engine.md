@@ -92,6 +92,10 @@ The illustrated world uses six decorative nodes; mobile atmosphere is static.
 Scrolling content is painted normally: no content-visibility hiding, full-card
 opacity reveal or scrolling backdrop blur. A small Core shadow and desktop
 transform/opacity breathing retain identity. Reduced motion disables motion.
+Prefixed backdrop declarations precede the standard property: production
+minification otherwise removed the standard `none` override while retaining a
+legacy standard blur. The compiled-bundle browser gate exposed this regression;
+release preparation also checks the emitted mobile Settings protection.
 
 Conversation owns the viewport; only history scrolls. System drawer is available
 on all sizes and context rail is optional on wide desktop. Markdown excludes

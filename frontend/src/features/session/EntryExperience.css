@@ -43,7 +43,7 @@
 }
 
 @media (max-width:560px) {
-  .entry-panel { border-color:var(--trident-edge); background:var(--trident-surface); box-shadow:var(--trident-shadow); backdrop-filter:none; -webkit-backdrop-filter:none; }
+  .entry-panel { border-color:var(--trident-edge); background:var(--trident-surface); box-shadow:var(--trident-shadow); -webkit-backdrop-filter:none; backdrop-filter:none; }
   .entry-panel p,.entry-organizations article>span { color:rgba(214,230,244,.86); }
   .entry-organizations article,.entry-organizations button { min-width:0; }
   .entry-organizations article strong,.entry-organizations article span,.entry-organizations button { overflow-wrap:anywhere; }

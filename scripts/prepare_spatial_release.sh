@@ -21,6 +21,7 @@ npm ci --prefix "$STAGE/source/frontend" --ignore-scripts --no-audit --no-fund
 TRIDENT_BUILD_SOURCE="$STAGE/source" TRIDENT_BUILD_REPO="$REPO" node --input-type=module <<'NODE'
 import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { readFileSync, readdirSync } from 'node:fs';
 const source = process.env.TRIDENT_BUILD_SOURCE;
 const repo = process.env.TRIDENT_BUILD_REPO;
 // Old tmux/preview VITE values must never override the approved production file.
@@ -39,6 +40,14 @@ if (!publicKey) {
 if (!publicKey) throw new Error('Only a Supabase publishable/anon key can enter the frontend');
 const result = spawnSync('npm', ['run', 'build'], {cwd:`${source}/frontend`, stdio:'inherit', env:{...process.env, ...values, VITE_API_BASE_URL:'/api'}});
 if (result.status !== 0) process.exit(result.status || 1);
+// Prefix order matters after CSS minification: a prefixed-only override leaves
+// legacy unprefixed blur active in browsers which ignore the prefixed alias.
+const assets = `${source}/frontend/dist/assets`;
+const css = readdirSync(assets).filter(name => name.endsWith('.css')).map(name => readFileSync(`${assets}/${name}`, 'utf8')).join('\n');
+const rules = [...css.matchAll(/[^{}]*settings-card[^{}]*\{([^{}]*)\}/g)];
+if (!rules.some(rule => rule[0].includes('.main-layout :is(') && /(?:^|;)backdrop-filter:none(?:;|$)/.test(rule[1]))) {
+  throw new Error('Compiled mobile Settings blur protection is missing');
+}
 NODE
 [[ -s "$STAGE/source/frontend/dist/index.html" ]]
 "$REPO/venv/bin/python" -m app.operations.artifacts "$STAGE/source/frontend/dist" > "$STAGE/source/FRONTEND_MANIFEST.json"

@@ -19,7 +19,8 @@ frontend environment file and retained rollback release
 `4223cc2a4e7629283b1310e14a412db419baec6b`. It archives only committed source,
 installs locked frontend dependencies in `/tmp`, builds with only the existing
 public production frontend variables, strips inherited VITE preview variables,
-and creates a checksummed read-only archive with source, frontend/dist, SHA and
+checks the compiled mobile blur override, and creates a checksummed read-only
+archive with source, frontend/dist, SHA and
 asset manifest. No environment file is copied. `visual-review/`, browser
 fixtures' output, secrets, local preview scripts and node_modules are excluded.
 The archive directory is printed; the eventual immutable destination is
