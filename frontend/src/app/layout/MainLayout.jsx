@@ -8,8 +8,10 @@ import useSessionContext from "../../hooks/useSessionContext";
 import useWorkspaceContext from "../../hooks/useWorkspaceContext";
 import { useCallback, useEffect, useState } from "react";
 import "./MainLayout.css";
+import useKeyboardViewport from "../../hooks/useKeyboardViewport";
 
 export default function MainLayout({ children }) {
+  useKeyboardViewport();
   const [isWorkspaceSelectorOpen, setWorkspaceSelectorOpen] = useState(false);
   const [isCommandOpen, setCommandOpen] = useState(false);
   const { session } = useSessionContext();

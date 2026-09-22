@@ -12,7 +12,7 @@
     "test:memory": "node src/features/memory/memoryState.test.js",
     "test:command": "node src/components/command/commandState.test.js",
     "test:activity": "node src/features/activity/activityState.test.js",
-    "test:artifacts": "node src/features/artifacts/artifactState.test.js",
+    "test:artifacts": "node src/features/artifacts/artifactState.test.js && node src/features/images/imageState.test.js",
     "test:settings": "node src/features/settings/settingsState.test.js",
     "test:session": "node src/features/session/sessionState.test.js",
     "test:consent": "node src/features/consent/consentState.test.js",

@@ -1,106 +1,25 @@
-.trident-environment { position:fixed; z-index:0; inset:0; overflow:hidden; pointer-events:none; background:radial-gradient(ellipse 90% 64% at 50% -16%,#2a5fa5 0%,rgba(27,74,151,.61) 27%,transparent 65%),radial-gradient(ellipse 52% 42% at 94% 88%,rgba(81,215,242,.15),transparent 68%),linear-gradient(145deg,#061b42 0%,#071a3d 46%,#06132c 100%); }
-.trident-environment::before,.trident-environment::after { content:""; position:absolute; inset:0; }.trident-environment::before { background:radial-gradient(circle at 12% 20%,rgba(101,243,239,.19),transparent 29%),radial-gradient(circle at 86% 35%,rgba(91,140,255,.24),transparent 31%),radial-gradient(circle at 52% 95%,rgba(170,124,255,.16),transparent 32%); mix-blend-mode:screen; }.trident-environment::after { background:linear-gradient(180deg,rgba(3,10,28,.02),rgba(4,11,27,.5)); }
-.trident-environment__grid { position:absolute; inset:-32%; opacity:.34; background-image:linear-gradient(rgba(124,209,255,.11) 1px,transparent 1px),linear-gradient(90deg,rgba(124,209,255,.11) 1px,transparent 1px); background-size:52px 52px; mask-image:radial-gradient(circle at center,black,transparent 68%); transform:perspective(600px) rotateX(58deg) translateY(-14%); transform-origin:center top; }
-.trident-environment__stars { position:absolute; inset:0 0 38%; opacity:.55; background-image:radial-gradient(circle,rgba(223,249,255,.85) 0 1px,transparent 1.4px),radial-gradient(circle,rgba(142,211,255,.72) 0 1px,transparent 1.5px); background-position:0 0,31px 19px; background-size:83px 79px,137px 131px; mask-image:linear-gradient(black,transparent 92%); animation:trident-stars 18s ease-in-out infinite alternate; }
-.trident-environment__constellations { position:absolute; inset:7% 8% 48%; opacity:.38; }
-.trident-environment__constellations i { position:absolute; width:clamp(90px,12vw,190px); height:1px; background:linear-gradient(90deg,transparent,rgba(190,235,255,.34),transparent); transform:rotate(var(--constellation-angle,-18deg)); }
-.trident-environment__constellations i::before,.trident-environment__constellations i::after { content:""; position:absolute; top:-2px; width:5px; height:5px; border-radius:50%; background:#dff9ff; box-shadow:0 0 12px rgba(132,217,255,.9); }
-.trident-environment__constellations i::before { left:18%; }.trident-environment__constellations i::after { right:12%; }
-.trident-environment__constellations i:nth-child(1) { top:9%; left:12%; }.trident-environment__constellations i:nth-child(2) { top:34%; right:10%; --constellation-angle:23deg; }.trident-environment__constellations i:nth-child(3) { top:70%; left:36%; --constellation-angle:7deg; opacity:.54; }
-.trident-environment__moon { position:absolute; top:10%; right:17%; width:clamp(42px,5.5vw,92px); aspect-ratio:1; border:1px solid rgba(210,244,255,.35); border-radius:50%; background:radial-gradient(circle at 38% 32%,#e8fbff 0 4%,#7bbcff 22%,#3568c3 55%,rgba(35,74,153,.2) 72%); box-shadow:inset -14px -9px 22px rgba(4,17,57,.48),0 0 42px rgba(125,196,255,.32); opacity:.62; animation:trident-moon 28s ease-in-out infinite alternate; }
-.trident-environment__clouds { position:absolute; top:17%; right:-8%; left:-8%; height:29%; opacity:.38; mask-image:linear-gradient(90deg,transparent,black 10% 90%,transparent); animation:trident-clouds 52s ease-in-out infinite alternate; }
-.trident-environment__clouds i { position:absolute; display:block; width:42%; height:58%; border-radius:50%; background:radial-gradient(ellipse at 50% 70%,rgba(196,232,255,.28),rgba(94,168,236,.12) 44%,transparent 72%); }
-.trident-environment__clouds i:nth-child(1) { top:8%; left:0; }.trident-environment__clouds i:nth-child(2) { top:30%; left:30%; width:48%; }.trident-environment__clouds i:nth-child(3) { top:0; right:0; }
-.trident-environment__clouds--low { top:auto; bottom:6%; height:32%; opacity:.24; filter:blur(3px); animation-duration:68s; animation-direction:alternate-reverse; }
-.trident-environment__mist { position:absolute; right:-12%; left:-12%; height:26%; opacity:.3; background:radial-gradient(ellipse at 12% 70%,rgba(187,231,255,.25),transparent 32%),radial-gradient(ellipse at 48% 58%,rgba(130,198,255,.2),transparent 37%),radial-gradient(ellipse at 82% 72%,rgba(182,229,255,.21),transparent 34%); mask-image:linear-gradient(90deg,transparent,black 12% 88%,transparent); }
-.trident-environment__mist--far { top:29%; animation:trident-mist 42s ease-in-out infinite alternate; }
-.trident-environment__mist--near { bottom:16%; opacity:.2; transform:scaleX(-1); animation:trident-mist 34s ease-in-out infinite alternate-reverse; }
-.trident-environment__architecture { position:absolute; top:5%; bottom:12%; width:26vw; min-width:300px; opacity:.18; filter:drop-shadow(0 0 28px rgba(83,164,255,.3)); background:linear-gradient(90deg,transparent,rgba(113,195,255,.09)),repeating-linear-gradient(90deg,transparent 0 28px,rgba(143,226,255,.22) 29px 30px,transparent 31px 56px); clip-path:polygon(0 18%,12% 18%,12% 5%,18% 5%,18% 26%,31% 26%,31% 11%,38% 11%,38% 34%,52% 34%,52% 0,59% 0,59% 24%,73% 24%,73% 12%,79% 12%,79% 31%,91% 31%,91% 20%,100% 20%,100% 100%,0 100%); mask-image:linear-gradient(180deg,black,transparent 92%); }
-.trident-environment__architecture--left { left:0; }.trident-environment__architecture--right { right:0; transform:scaleX(-1); }
-.trident-environment__world { position:absolute; left:50%; bottom:10%; width:min(46vw,760px); height:min(24vw,390px); border:1px solid rgba(148,231,255,.13); border-radius:50% 50% 8% 8% / 70% 70% 12% 12%; background:radial-gradient(ellipse at 50% 72%,rgba(101,243,239,.19),rgba(52,125,239,.12) 34%,transparent 68%); box-shadow:inset 0 -24px 70px rgba(77,150,255,.08),0 0 90px rgba(75,164,255,.11); opacity:.52; transform:translateX(-50%); }
-.trident-environment__horizon { position:absolute; right:-18%; bottom:10%; left:-18%; height:16%; border-top:1px solid rgba(152,231,255,.18); background:linear-gradient(180deg,rgba(76,163,255,.1),transparent); box-shadow:0 -18px 72px rgba(75,164,255,.12); transform:perspective(560px) rotateX(58deg); transform-origin:bottom; }
-.trident-environment__sanctuary { position:absolute; right:8%; bottom:12%; left:8%; height:44%; opacity:.32; filter:drop-shadow(0 0 18px rgba(97,182,255,.22)); mask-image:linear-gradient(180deg,transparent,black 18% 78%,transparent); }
-.trident-environment__sanctuary::before,.trident-environment__sanctuary::after { content:""; position:absolute; bottom:0; width:34%; height:92%; border:1px solid rgba(158,225,255,.18); border-bottom:0; border-radius:52% 52% 0 0 / 20% 20% 0 0; box-shadow:inset 0 0 34px rgba(94,174,255,.08); }
-.trident-environment__sanctuary::before { left:0; transform:perspective(700px) rotateY(18deg); transform-origin:left bottom; }.trident-environment__sanctuary::after { right:0; transform:perspective(700px) rotateY(-18deg); transform-origin:right bottom; }
-.trident-environment__sanctuary i { position:absolute; bottom:0; width:7%; min-width:18px; height:var(--spire-height,48%); border:1px solid rgba(153,225,255,.17); border-bottom:0; border-radius:50% 50% 0 0 / 16% 16% 0 0; background:linear-gradient(90deg,rgba(41,102,186,.04),rgba(127,205,255,.12),rgba(30,83,164,.04)); box-shadow:inset 0 0 20px rgba(101,243,239,.05); }
-.trident-environment__sanctuary i::before { content:""; position:absolute; bottom:100%; left:50%; width:1px; height:30%; background:linear-gradient(transparent,rgba(185,239,255,.5)); box-shadow:0 0 9px rgba(101,243,239,.45); }
-.trident-environment__sanctuary i:nth-child(1){left:7%;--spire-height:46%}.trident-environment__sanctuary i:nth-child(2){left:18%;--spire-height:68%}.trident-environment__sanctuary i:nth-child(3){left:30%;--spire-height:38%}.trident-environment__sanctuary i:nth-child(4){left:46.5%;--spire-height:27%}.trident-environment__sanctuary i:nth-child(5){right:30%;--spire-height:38%}.trident-environment__sanctuary i:nth-child(6){right:18%;--spire-height:68%}.trident-environment__sanctuary i:nth-child(7){right:7%;--spire-height:46%}
-.trident-environment__axis { position:absolute; z-index:1; top:20%; bottom:7%; left:50%; width:2px; background:linear-gradient(transparent,rgba(194,246,255,.45) 38%,rgba(101,243,239,.72) 64%,transparent); box-shadow:0 0 18px rgba(101,243,239,.36),0 0 60px rgba(76,151,255,.25); opacity:.5; transform:translateX(-50%); animation:trident-axis 9s ease-in-out infinite alternate; }
-.trident-environment__orbit { position:absolute; width:64vw; height:28vw; min-width:520px; min-height:220px; border:1px solid rgba(148,231,255,.09); border-radius:50%; opacity:.65; transform:rotate(-18deg); }.trident-environment__orbit--one { top:18%; left:20%; animation:trident-orbit 34s ease-in-out infinite alternate; }.trident-environment__orbit--two { right:-18%; bottom:8%; width:48vw; height:20vw; border-color:rgba(170,124,255,.08); transform:rotate(22deg); animation:trident-orbit 42s ease-in-out infinite alternate-reverse; }
-.trident-environment__beam { position:absolute; width:42vw; min-width:360px; height:140vh; opacity:.24; background:linear-gradient(90deg,transparent,rgba(139,231,255,.22),transparent); filter:blur(24px); transform:rotate(28deg); will-change:translate,opacity; }.trident-environment__beam--one { top:-62%; left:3%; animation:trident-beam 26s var(--ease-out) infinite alternate; }.trident-environment__beam--two { right:-18%; bottom:-72%; opacity:.18; transform:rotate(-35deg); animation:trident-beam 31s var(--ease-out) infinite alternate-reverse; }
-.trident-orb { position:absolute; width:62vw; min-width:360px; aspect-ratio:1; border-radius:50%; filter:blur(20px); opacity:.56; will-change:transform; }.trident-orb--electric { top:-28%; left:12%; background:radial-gradient(circle,rgba(83,142,255,.76),rgba(71,113,235,.31) 35%,transparent 69%); animation:trident-drift 18s var(--ease-out) infinite alternate; }.trident-orb--cyan { right:-24%; bottom:-36%; background:radial-gradient(circle,rgba(76,240,238,.52),rgba(32,165,225,.18) 35%,transparent 68%); animation:trident-drift 24s var(--ease-out) infinite alternate-reverse; }.trident-orb--violet { left:-26%; bottom:-38%; background:radial-gradient(circle,rgba(157,111,255,.43),transparent 64%); animation:trident-breathe 16s ease-in-out infinite; }
-.trident-particles i { position:absolute; display:block; width:4px; height:4px; border-radius:50%; background:var(--cyan); box-shadow:0 0 16px 2px rgba(101,243,239,.72); opacity:.68; animation:trident-particle 14s ease-in-out infinite alternate; will-change:transform,opacity; }.trident-particles i:nth-child(1){left:16%;top:28%;}.trident-particles i:nth-child(2){left:73%;top:19%;animation-delay:-4s;}.trident-particles i:nth-child(3){left:88%;top:67%;animation-delay:-8s;}.trident-particles i:nth-child(4){left:32%;top:75%;animation-delay:-11s;}.trident-particles i:nth-child(5){left:61%;top:53%;animation-delay:-6s;}.trident-particles i:nth-child(6){left:45%;top:12%;animation-delay:-2s;}
-.trident-mark { position:relative; display:grid; place-items:center; width:28px; height:32px; color:var(--cyan); }.trident-mark__core { position:relative; z-index:1; width:26px; height:30px; filter:drop-shadow(0 0 5px var(--cyan)) drop-shadow(0 0 15px rgba(91,140,255,.92)); }.trident-mark__outline { stroke:rgba(226,253,255,.96); }.trident-mark__spark { stroke:var(--electric-soft); opacity:.92; }.trident-mark__aura { position:absolute; width:20px; height:20px; border-radius:50%; background:radial-gradient(circle,var(--cyan),var(--electric) 52%,transparent 72%); filter:blur(9px); opacity:.8; }
-@keyframes trident-drift { from { transform:translate3d(-3%, -2%, 0) scale(.96); } to { transform:translate3d(5%, 7%, 0) scale(1.08); } }
-@keyframes trident-breathe { 50% { opacity:.46; transform:scale(1.08); } }
-@keyframes trident-particle { from { transform:translate3d(0,0,0); opacity:.14; } to { transform:translate3d(16px,-30px,0); opacity:.66; } }
-@keyframes trident-beam { from { translate:-4% 0; opacity:.12; } to { translate:8% 3%; opacity:.28; } }
-@keyframes trident-orbit { from { translate:-2% -1%; opacity:.3; } to { translate:3% 2%; opacity:.72; } }
-@keyframes trident-stars { from { opacity:.38; } to { opacity:.62; } }
-@keyframes trident-moon { from { transform:translate3d(0,-2px,0); } to { transform:translate3d(5px,4px,0); } }
-@keyframes trident-mist { from { transform:translate3d(-2%,0,0); opacity:.18; } to { transform:translate3d(2%,4px,0); opacity:.34; } }
-@keyframes trident-clouds { from { transform:translate3d(-1.5%,0,0); opacity:.27; } to { transform:translate3d(1.5%,4px,0); opacity:.42; } }
-@keyframes trident-axis { from { opacity:.32; } to { opacity:.58; } }
-@media(max-width:1024px){.trident-environment__architecture{opacity:.1}.trident-environment__world{width:68vw;height:34vw}}
-@media(max-width:760px){.trident-environment__orbit--two{display:none}.trident-environment__orbit--one{top:26%;left:-42%;opacity:.32}.trident-environment{background:radial-gradient(ellipse 130% 46% at 50% 0%,#2c68b4 0%,rgba(24,70,151,.69) 36%,transparent 71%),linear-gradient(160deg,#092653 0%,#081a3a 55%,#071329 100%)}.trident-environment__grid{opacity:.42;transform:perspective(420px) rotateX(60deg) translateY(-5%)}.trident-environment__horizon{bottom:19%;height:12%;opacity:.8}.trident-environment__beam{opacity:.14}.trident-orb{width:118vw;opacity:.62}.trident-orb--electric{top:-18%;left:-15%}.trident-orb--cyan{right:-50%;bottom:-20%}.trident-orb--violet{left:-52%;bottom:20%;opacity:.38}}
-@media(max-width:760px){.trident-environment__architecture{display:none}.trident-environment__world{bottom:18%;width:110vw;height:46vw;opacity:.3}.trident-environment__moon{top:12%;right:9%;opacity:.54}.trident-environment__clouds{top:20%;height:25%;opacity:.28}.trident-environment__mist{height:20%;opacity:.2}.trident-environment__mist--far{top:31%}.trident-environment__sanctuary{right:-18%;bottom:15%;left:-18%;height:38%;opacity:.3}.trident-environment__sanctuary i:nth-child(1),.trident-environment__sanctuary i:nth-child(7){display:none}.trident-environment__axis{top:18%;bottom:13%;opacity:.48}.trident-particles i:nth-child(n+5){display:none}}
-
-/* Extra depth remains CSS-only and deliberately sparse on phones. */
-.trident-particles i:nth-child(7){left:8%;top:58%;animation-delay:-9s}.trident-particles i:nth-child(8){left:79%;top:83%;animation-delay:-3s}.trident-particles i:nth-child(9){left:54%;top:34%;animation-delay:-12s}.trident-particles i:nth-child(10){left:24%;top:91%;animation-delay:-5s}.trident-particles i:nth-child(11){left:94%;top:42%;animation-delay:-7s}.trident-particles i:nth-child(12){left:40%;top:48%;animation-delay:-1s}
-@keyframes trident-atmosphere { from { transform:translate3d(-1%,0,0) scale(1); opacity:.82; } to { transform:translate3d(1.5%,1%,0) scale(1.04); opacity:1; } }
-@media(max-width:760px){.trident-environment__world{opacity:.36}.trident-particles i{display:block;width:3px;height:3px;opacity:.48}.trident-particles i:nth-child(n+9){display:none}.trident-environment::before{animation:trident-atmosphere 30s ease-in-out infinite alternate}.trident-environment__beam--one{left:-35%;opacity:.18}.trident-environment__beam--two{right:-45%;opacity:.12}}
-@media(prefers-reduced-motion:reduce){.trident-environment::before,.trident-environment__stars,.trident-environment__moon,.trident-environment__clouds,.trident-environment__mist,.trident-environment__axis,.trident-environment__orbit,.trident-environment__beam,.trident-orb,.trident-particles i{animation:none}.trident-environment__mist,.trident-environment__beam,.trident-particles i{will-change:auto}}
-
-/* Architectural depth: lightweight CSS structures, never the flattened reference image. */
-.trident-environment__vault { position:absolute; top:4%; bottom:8%; width:23vw; min-width:260px; opacity:.2; filter:drop-shadow(0 0 34px rgba(72,151,255,.26)); background:repeating-linear-gradient(90deg,transparent 0 31px,rgba(161,224,255,.13) 32px 33px,transparent 34px 66px); mask-image:linear-gradient(180deg,transparent,black 14%,black 76%,transparent 98%); }
-.trident-environment__vault::before,.trident-environment__vault::after { content:""; position:absolute; inset:0; border:1px solid rgba(147,221,255,.14); border-bottom:0; border-radius:50% 50% 0 0 / 24% 24% 0 0; box-shadow:inset 0 0 45px rgba(90,165,255,.07); }
-.trident-environment__vault::after { inset:13% 18% 0; border-color:rgba(117,203,255,.18); }
-.trident-environment__vault--left { left:-4%; transform:perspective(700px) rotateY(18deg); transform-origin:left center; }
-.trident-environment__vault--right { right:-4%; transform:perspective(700px) rotateY(-18deg); transform-origin:right center; }
-.trident-environment__portal { position:absolute; left:50%; top:23%; width:min(28vw,480px); aspect-ratio:1; border:1px solid rgba(127,219,255,.1); border-radius:50%; opacity:.62; transform:translateX(-50%); box-shadow:0 0 80px rgba(65,151,255,.1),inset 0 0 70px rgba(101,243,239,.035); animation:trident-portal 38s ease-in-out infinite alternate; }
-.trident-environment__portal::before,.trident-environment__portal::after,.trident-environment__portal i { content:""; position:absolute; inset:12%; border:1px solid rgba(141,222,255,.11); border-radius:50%; }
-.trident-environment__portal::after { inset:27%; border-color:rgba(176,124,255,.11); }
-.trident-environment__portal i:nth-child(1) { inset:4% 38%; border-radius:50%; transform:rotate(38deg); }
-.trident-environment__portal i:nth-child(2) { inset:38% 4%; border-radius:50%; transform:rotate(-20deg); }
-.trident-environment__portal i:nth-child(3) { inset:45%; border-color:rgba(101,243,239,.38); background:radial-gradient(circle,rgba(198,255,255,.48),rgba(70,178,255,.13) 32%,transparent 72%); box-shadow:0 0 34px rgba(101,243,239,.3); }
-.trident-environment__floor { position:absolute; right:-20%; bottom:-33%; left:-20%; height:62%; opacity:.33; background-image:linear-gradient(rgba(130,215,255,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(130,215,255,.12) 1px,transparent 1px); background-size:68px 46px; mask-image:radial-gradient(ellipse at 50% 20%,black,transparent 68%); transform:perspective(520px) rotateX(66deg); transform-origin:center top; }
-.trident-environment__foreground { position:absolute; z-index:1; right:-4%; bottom:-4%; left:-4%; height:24%; opacity:.34; mask-image:linear-gradient(180deg,transparent,black 46%); }
-.trident-environment__foreground::before { content:""; position:absolute; right:18%; bottom:0; left:18%; height:74%; border:1px solid rgba(150,225,255,.14); border-radius:50% 50% 0 0 / 65% 65% 0 0; background:radial-gradient(ellipse at 50% 100%,rgba(60,151,255,.17),transparent 62%); box-shadow:inset 0 0 52px rgba(101,243,239,.05),0 -20px 80px rgba(78,152,255,.08); }
-.trident-environment__foreground i { position:absolute; bottom:0; width:20%; height:92%; border-left:1px solid rgba(144,219,255,.13); background:linear-gradient(90deg,rgba(6,22,56,.3),transparent); transform:skewX(var(--foreground-skew,-11deg)); }
-.trident-environment__foreground i:first-child { left:0; }.trident-environment__foreground i:last-child { right:0; --foreground-skew:11deg; transform-origin:right bottom; }
-@keyframes trident-portal { from { translate:0 -1%; rotate:-1deg; opacity:.42; } to { translate:0 2%; rotate:1deg; opacity:.68; } }
-@media(max-width:1024px){.trident-environment__vault{width:30vw;opacity:.12}.trident-environment__portal{top:28%;width:46vw}.trident-environment__floor{opacity:.26}}
-@media(max-width:760px){.trident-environment__vault{display:block;top:10%;width:42vw;min-width:150px;opacity:.09}.trident-environment__portal{top:17%;width:88vw;opacity:.42}.trident-environment__floor{bottom:-20%;height:50%;background-size:48px 38px;opacity:.23}.trident-environment__constellations{inset:8% 3% 54%;opacity:.25}.trident-environment__constellations i:nth-child(3){display:none}.trident-environment__clouds--low{bottom:12%;opacity:.17}.trident-environment__foreground{height:19%;opacity:.24}}
-@media(prefers-reduced-motion:reduce){.trident-environment__portal{animation:none}}
-
-/* iOS compositing budget: the decorative world remains present, but mobile
-   scrolling never has to continuously rasterise its largest atmospheric layers. */
-@media (max-width:760px) {
-  .trident-environment,
-  .trident-environment *,
-  .trident-orb,
-  .trident-particles i {
-    animation:none !important;
-    will-change:auto;
-  }
-
-  .trident-environment__beam,
-  .trident-orb,
-  .trident-environment__orbit,
-  .trident-environment__portal,
-  .trident-environment__world,
-  .trident-environment__grid,
-  .trident-environment__architecture,
-  .trident-environment__vault,
-  .trident-environment__horizon,
-  .trident-environment__sanctuary,
-  .trident-particles {
-    display:none;
-  }
-
-  .trident-environment__clouds,
-  .trident-environment__mist,
-  .trident-environment__moon {
-    filter:none;
-  }
+/* One environment, six decorative nodes. Motion never animates paint properties. */
+.trident-mark { position:relative; display:grid; place-items:center; width:28px; height:32px; color:#a7edff; }
+.trident-mark__core { position:relative; z-index:1; width:26px; height:30px; filter:drop-shadow(0 0 5px rgba(131,231,255,.55)); }
+.trident-mark__outline { stroke:#e2fdff; }
+.trident-mark__spark { stroke:#8bbdff; opacity:.92; }
+.trident-mark__aura { position:absolute; width:48px; height:48px; border-radius:50%; background:radial-gradient(circle,rgba(101,243,239,.28),rgba(91,140,255,.1) 42%,transparent 70%); }
+.trident-environment { position:fixed; z-index:0; inset:0; overflow:hidden; pointer-events:none; background:#030e26; }
+.trident-environment__world-art { position:absolute; width:100%; height:100%; inset:0; object-fit:cover; object-position:50% 48%; opacity:1; }
+.trident-environment__stars { position:absolute; inset:0; background:radial-gradient(ellipse at 75% 0,rgba(57,38,100,.22),transparent 48%),linear-gradient(90deg,rgba(1,9,29,.7),transparent 32% 75%,rgba(1,9,29,.42)); }
+.trident-environment__axis { position:absolute; top:24%; bottom:10%; left:52%; width:1px; background:linear-gradient(transparent,rgba(210,252,255,.4),transparent); }
+.trident-environment__portal { position:absolute; width:27vw; height:13vw; top:24%; left:39%; border:1px solid rgba(149,233,255,.14); border-radius:50%; transform:rotate(-18deg); }
+.trident-environment__mist { position:absolute; inset:50% 0 0; background:radial-gradient(ellipse at 55% 50%,rgba(110,211,240,.13),transparent 60%); }
+.trident-environment__floor { position:absolute; inset:0; background:linear-gradient(180deg,rgba(2,11,30,.2),transparent 28% 53%,rgba(2,11,30,.55)); }
+@keyframes trident-drift { from { transform:translateY(0); opacity:.45; } to { transform:translateY(-10px); opacity:.8; } }
+@keyframes trident-core-breathe { from { transform:scale(.98); opacity:.8; } to { transform:scale(1.02); opacity:1; } }
+@media (min-width:1101px) and (prefers-reduced-motion:no-preference) {
+  .trident-environment__clouds--low { animation:trident-drift 22s ease-in-out infinite alternate; }
+  .nova-ready__core .trident-mark { animation:trident-core-breathe 8s ease-in-out infinite alternate; }
 }
+@media (max-width:760px) {
+  .trident-environment__world-art { object-position:51% 50%; }
+  .trident-environment__portal,.trident-environment__axis { display:none; }
+  .trident-environment__floor { background:linear-gradient(180deg,rgba(2,11,30,.2),transparent 28%,rgba(2,11,30,.65)); }
+}
+@media (prefers-reduced-motion:reduce) { .trident-environment *,.nova-ready__core * { animation:none!important; } }

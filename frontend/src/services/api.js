@@ -105,8 +105,22 @@ export const createConversation = (workspaceId, title) => request(`/workspaces/$
 });
 export const getConversation = (workspaceId, conversationId) => request(`/workspaces/${workspaceId}/conversations/${conversationId}`);
 export const sendWorkspaceMessage = (workspaceId, conversationId, content) => request(`/workspaces/${workspaceId}/conversations/${conversationId}/messages`, {
-  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content }),
+  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content, request_key: requestId() }),
 });
+export const getImageCapability = (workspaceId) => request(`/workspaces/${workspaceId}/images/capability`);
+export const listImages = (workspaceId, conversationId) => listAll(`/workspaces/${workspaceId}/images${conversationId ? `?conversation_id=${encodeURIComponent(conversationId)}` : ""}`);
+export const readImage = (workspaceId, imageId) => requestBinary(`/workspaces/${workspaceId}/images/${imageId}/content`);
+export const retryImage = (workspaceId, imageId) => request(`/workspaces/${workspaceId}/images/${imageId}/retry`, { method: "POST" });
+export const cancelImage = (workspaceId, imageId) => request(`/workspaces/${workspaceId}/images/${imageId}/cancel`, { method: "POST" });
+export async function createImage(workspaceId, conversationId, prompt, options) {
+  const form = new FormData();
+  form.append("prompt", prompt);
+  form.append("request_key", options.requestKey);
+  form.append("aspect_ratio", options.aspectRatio || "1:1");
+  if (options.sourceId) form.append("source_id", options.sourceId);
+  if (options.file) form.append("image", options.file);
+  return request(`/workspaces/${workspaceId}/conversations/${conversationId}/images`, { method: "POST", body: form });
+}
 export const listDocuments = (workspaceId) => listAll(`/workspaces/${workspaceId}/documents`);
 export const deleteDocument = (workspaceId, documentId) => request(`/workspaces/${workspaceId}/documents/${documentId}`, { method: "DELETE" });
 export const retryDocument = (workspaceId, documentId) => request(`/workspaces/${workspaceId}/documents/${documentId}/retry`, { method: "POST" });

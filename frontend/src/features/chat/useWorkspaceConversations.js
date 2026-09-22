@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createConversation, getConversation, listConversations, sendWorkspaceMessage } from "../../services/api.js";
+import { createConversation, createImage, getConversation, listConversations, sendWorkspaceMessage } from "../../services/api.js";
 import {
   acceptsWorkspaceResult,
   acceptsConversationResult,
@@ -154,7 +154,7 @@ export default function useWorkspaceConversations(workspaceId) {
     });
   }, [workspaceId, selectConversation]);
 
-  const sendMessage = useCallback(async (content) => {
+  const sendMessage = useCallback(async (content, imageOptions = null) => {
     const conversationId = activeConversationIdRef.current;
     if (!workspaceId || !conversationId || !content.trim() || sendingRef.current.has(conversationId)) return false;
     const pendingId = `pending-${Date.now()}`;
@@ -166,11 +166,18 @@ export default function useWorkspaceConversations(workspaceId) {
       messages: appendOptimisticMessage(current.messages, pendingId, content.trim()),
     } : current);
     try {
-      const reply = await sendWorkspaceMessage(workspaceId, conversationId, content.trim());
+      let reply;
+      let detail;
+      if (imageOptions) {
+        await createImage(workspaceId, conversationId, content.trim(), imageOptions);
+        detail = await getConversation(workspaceId, conversationId);
+      } else {
+        reply = await sendWorkspaceMessage(workspaceId, conversationId, content.trim());
+      }
       if (!acceptsConversationResult(workspaceRef.current, workspaceId, activeConversationIdRef.current, conversationId)) return true;
       setActiveConversationState((current) => current?.id === conversationId ? {
         ...current,
-        messages: reconcileSuccessfulMessages(current.messages, pendingId, reply),
+        messages: detail ? detail.messages : reconcileSuccessfulMessages(current.messages, pendingId, reply),
       } : current);
       refresh().catch(() => {});
       return true;
@@ -195,12 +202,12 @@ export default function useWorkspaceConversations(workspaceId) {
     }
   }, [workspaceId, refresh]);
 
-  const startConversationWithMessage = useCallback(async (content) => {
+  const startConversationWithMessage = useCallback(async (content, imageOptions = null) => {
     const created = activeConversationIdRef.current
       ? activeConversation
       : await addConversation();
     if (!created) return false;
-    return sendMessage(content);
+    return sendMessage(content, imageOptions);
   }, [activeConversation, addConversation, sendMessage]);
 
   const lifecycle = conversationLifecycle({
