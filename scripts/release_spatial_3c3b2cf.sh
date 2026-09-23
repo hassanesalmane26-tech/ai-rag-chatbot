@@ -673,8 +673,44 @@ def run_delivery_self_tests():
                     self.assertEqual(events[-1], 'rollback')
                     if failure == 'migration': self.assertNotIn('start:' + UNITS[0], events)
 
+    class JournalTimestampTests(unittest.TestCase):
+        def journal_arguments(self):
+            # Evaluate the real timestamp assignment and journal command, not a test copy.
+            assignment = next(node for node in main.body if isinstance(node, ast.Assign)
+                and any(isinstance(target, ast.Name) and target.id == 'service_since'
+                    for target in node.targets))
+            namespace = {'dt': dt, 'UNITS': UNITS}
+            exec(compile(ast.Module(body=[assignment], type_ignores=[]),
+                '<journal-timestamp>', 'exec'), namespace)
+            commands = [node for node in ast.walk(main) if isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name) and node.func.id == 'run'
+                and node.args and isinstance(node.args[0], ast.List)
+                and node.args[0].elts and isinstance(node.args[0].elts[0], ast.Constant)
+                and node.args[0].elts[0].value == '/usr/bin/journalctl']
+            self.assertEqual(len(commands), 1)
+            return eval(compile(ast.Expression(commands[0].args[0]),
+                '<journal-arguments>', 'eval'), namespace)
+
+        def test_actual_journal_timestamp_format_and_unit_scope(self):
+            arguments = self.journal_arguments()
+            timestamp = arguments[arguments.index('--since') + 1]
+            self.assertRegex(timestamp, r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC$')
+            self.assertNotIn('T', timestamp[:19])  # UTC itself contains a T.
+            self.assertNotIn('+00:00', timestamp)
+            self.assertTrue(timestamp.endswith(' UTC'))
+            dt.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S UTC')
+            self.assertEqual([arguments[i + 1] for i, value in enumerate(arguments)
+                if value == '-u'], ['trident-backend.service', 'trident-knowledge-worker.service'])
+
+        def test_actual_journal_timestamp_accepted_readonly(self):
+            # Parse with this host's journalctl; zero lines avoids exposing log contents.
+            result = subprocess.run(self.journal_arguments() + ['--lines=0'],
+                capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn('Failed to parse timestamp', result.stderr)
+
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-        for case in (OperationalHeadTests, ActivationTests))
+        for case in (OperationalHeadTests, ActivationTests, JournalTimestampTests))
     return unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful()
 
 if sys.argv[1:] == ['--self-test']:
@@ -828,7 +864,7 @@ try:
     migrate('up')
     gate(revision() == '0011_workspace_images', 'Migration not finalized')
     phase('ACTIVATE_MATCHING_BACKEND')
-    service_since = dt.datetime.now(dt.timezone.utc).isoformat()
+    service_since = dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
     write_runtime_dropins(NEW, RELEASE_SHA)
     activate_runtime(NEW, RELEASE_SHA, '0011_workspace_images')
     phase('SWITCH_NGINX')
