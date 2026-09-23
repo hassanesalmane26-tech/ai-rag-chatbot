@@ -3,8 +3,14 @@
 set -euo pipefail
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 umask 077
-[[ $EUID -eq 0 ]] || { printf 'ERROR: local root execution required.\n' >&2; exit 1; }
-exec /home/administrator/ai-rag-chatbot/venv/bin/python - <<'PY'
+if [[ $# -eq 1 && $1 == --self-test ]]; then
+    : # Definitions and isolated tests only; the production procedure is never entered.
+elif [[ $# -eq 0 ]]; then
+    [[ $EUID -eq 0 ]] || { printf 'ERROR: local root execution required.\n' >&2; exit 1; }
+else
+    printf 'Usage: %s [--self-test]\n' "$0" >&2; exit 2
+fi
+exec /home/administrator/ai-rag-chatbot/venv/bin/python -B - "$@" <<'PY'
 import datetime as dt
 import fcntl
 import hashlib
@@ -49,6 +55,8 @@ BACKUP = pathlib.Path('/var/backups/trident-ai/releases') / f'{STAMP}-{RELEASE_S
 PRESERVED_BACKUP = pathlib.Path('/var/backups/trident-ai/releases/20260922T212509Z-558456-3c3b2cf068dc')
 ROLLBACK_RUNTIME = ROOT / f'.backend-rollback-{ROLLBACK_SHA}-20260922T212509Z-558456'
 READINESS_TIMEOUT = 90
+OPS_SCRIPT_PATH = 'scripts/release_spatial_3c3b2cf.sh'
+OPERATIONAL_HEAD = None
 SERVICE_USER = pwd.getpwnam('administrator')
 STATE = dict(backup=False, stopped=False, migration=False, nginx=False, switched=False, success=False)
 STEP = 'preflight'
@@ -94,7 +102,25 @@ def run(args, *, cwd=None, env=None, user=False, timeout=180, input=None):
     return result.stdout
 
 def git(*args):
-    return run(['/usr/bin/git', '-c', f'safe.directory={REPO}', '-C', REPO, *args]).decode().strip()
+    output = run(['/usr/bin/git', '-c', f'safe.directory={REPO}', '-C', REPO, *args]).decode()
+    return output if '-z' in args else output.strip()
+
+def verify_clean_checkout():
+    git('diff', '--exit-code'); git('diff', '--cached', '--exit-code'); git('diff', '--check')
+    # Existing visual evidence is intentionally untracked, never deployable source.
+    untracked = git('ls-files', '--others', '--exclude-standard', '-z').split('\0')
+    gate(all(not name or name.startswith('visual-review/') for name in untracked), 'Unexpected untracked source')
+
+def capture_operational_head():
+    gate(git('branch', '--show-current') == 'trident-ai', 'Wrong branch')
+    head = git('rev-parse', 'HEAD')
+    gate(re.fullmatch('[0-9a-f]{40}', head) is not None, 'Invalid operational HEAD')
+    gate(head == git('rev-parse', 'origin/trident-ai'), 'Operational HEAD is not synchronized with origin/trident-ai')
+    git('merge-base', '--is-ancestor', RELEASE_SHA, head)
+    changed = set(filter(None, git('diff', '--no-renames', '--name-only', '-z', RELEASE_SHA, head, '--').split('\0')))
+    gate(changed == {OPS_SCRIPT_PATH}, 'Committed operational delta exceeds release-script allowlist')
+    verify_clean_checkout()
+    return head
 
 def unit_property(unit, key):
     return run(['/usr/bin/systemctl', 'show', unit, '-p', key, '--value']).decode().strip()
@@ -325,13 +351,14 @@ def migrate(direction):
     args += ['upgrade', '0011_workspace_images'] if direction == 'up' else ['-x', 'allow_empty_image_downgrade=yes', 'downgrade', '0010_document_lifecycle']
     run(args, cwd=NEW, env=runtime_env(RELEASE_SHA), user=True, timeout=300)
 
-def wait_backend(root, sha, schema):
+def wait_backend(root, sha, schema, *, include_worker=True):
     gate(READINESS_TIMEOUT >= 30, 'Unsafe readiness timeout')
     deadline = time.monotonic() + READINESS_TIMEOUT
     last_failure = 'not checked'
     while True:
         try:
-            pids = {unit: process_identity(root, sha, unit) for unit in UNITS}
+            units = UNITS if include_worker else UNITS[:1]
+            pids = {unit: process_identity(root, sha, unit) for unit in units}
             live = direct_health('live')
             ready = direct_health('ready')
             build = direct_health('build')
@@ -339,7 +366,7 @@ def wait_backend(root, sha, schema):
             gate(build['build_sha'] == sha and build['migration_revision'] == schema and build['migration_head'] == schema, 'Backend SHA/schema mismatch')
             gate(build['environment'] == 'production' and build['security_mode'] == 'oidc', 'Production security mode changed')
             if ENGINE is not None: gate(revision() == schema, 'Database revision differs from health identity')
-            for unit in UNITS:
+            for unit in units:
                 gate(process_identity(root, sha, unit) == pids[unit], 'Runtime restarted during health checks')
             return
         except (GateError, OSError, ValueError, KeyError, http_client.HTTPException) as error:
@@ -347,6 +374,30 @@ def wait_backend(root, sha, schema):
         remaining = deadline - time.monotonic()
         if remaining <= 0: raise GateError(f'Backend readiness/identity timeout ({READINESS_TIMEOUT}s): {last_failure}')
         time.sleep(min(2, remaining))
+
+def wait_worker(root, sha):
+    deadline = time.monotonic() + READINESS_TIMEOUT
+    last_failure = 'not checked'
+    while True:
+        try:
+            pid = process_identity(root, sha, UNITS[1])
+            gate(process_identity(root, sha, UNITS[1]) == pid, 'Worker restarted during identity checks')
+            return
+        except (GateError, OSError, ValueError) as error:
+            last_failure = str(error) if isinstance(error, GateError) else type(error).__name__
+        remaining = deadline - time.monotonic()
+        if remaining <= 0: raise GateError(f'Worker identity timeout ({READINESS_TIMEOUT}s): {last_failure}')
+        time.sleep(min(2, remaining))
+
+def activate_runtime(root, sha, schema):
+    # Caller verified/wrote drop-ins and completed daemon-reload before entering.
+    gate(ENGINE is not None and revision() == schema, 'Database migration must complete before activation')
+    run(['/usr/bin/systemctl', 'start', UNITS[0]])
+    wait_backend(root, sha, schema, include_worker=False)
+    run(['/usr/bin/systemctl', 'start', UNITS[1]])
+    wait_worker(root, sha)
+    # Recheck backend READY/build/schema AND both identities before frontend switch.
+    wait_backend(root, sha, schema)
 
 def wait_frontend(root):
     index = (root/'frontend/dist/index.html').read_bytes()
@@ -384,8 +435,7 @@ def rollback():
     restore_runtime_dropins()
     restore_sites()
     nginx_check()
-    for unit in UNITS: run(['/usr/bin/systemctl', 'start', unit])
-    wait_backend(ROLLBACK_RUNTIME, ROLLBACK_SHA, '0010_document_lifecycle')
+    activate_runtime(ROLLBACK_RUNTIME, ROLLBACK_SHA, '0010_document_lifecycle')
     run(['/usr/bin/systemctl', 'reload', 'nginx'])
     wait_frontend(OLD)
     verify_preserved_backup()
@@ -395,7 +445,9 @@ def rollback():
 
 def verify_protected():
     for path, original in PROTECTED.items(): gate(digest(path) == original, 'Protected configuration changed')
-    gate(git('rev-parse', 'HEAD') == RELEASE_SHA, 'Checkout changed during release')
+    gate(OPERATIONAL_HEAD is not None and git('rev-parse', 'HEAD') == OPERATIONAL_HEAD, 'Operational HEAD changed during release')
+    gate(git('rev-parse', 'origin/trident-ai') == OPERATIONAL_HEAD, 'Operational origin changed during release')
+    verify_clean_checkout()
     gate(git('rev-parse', 'refs/heads/main') == initial_main, 'main changed during release')
     gate(git('rev-parse', 'trident-ai-v1.0.0^{commit}') == GOLD, 'Gold changed during release')
 
@@ -425,6 +477,209 @@ def report(success):
     print('REMAINING=real iPhone visual/fluidity and interactive OIDC acceptance' + ('' if AUTHENTICATED else '; authenticated module flows need a legitimate user session'))
     print('Founder visual validation: PENDING', flush=True)
 
+def run_delivery_self_tests():
+    # Kept in the only allowed operational path. No production entrypoint executes.
+    import ast
+    import contextlib
+    import types
+    import unittest
+    from unittest.mock import patch
+
+    script = (REPO/OPS_SCRIPT_PATH).read_text()
+    tree = ast.parse(script.split("<<'PY'\n", 1)[1].rsplit('\nPY', 1)[0])
+    main = next(node for node in tree.body if isinstance(node, ast.Try))
+    start = next(i for i, node in enumerate(main.body) if ast.unparse(node) == "phase('MIGRATE_0011')")
+    finish = next(i for i, node in enumerate(main.body) if ast.unparse(node) == "phase('SWITCH_NGINX')")
+    # Exercise the actual activation statements and actual top-level failure handler.
+    scenario_code = compile(ast.fix_missing_locations(ast.Module(body=[ast.Try(
+        body=main.body[start:finish+1] + [ast.parse("phase('PRODUCTION_SMOKE')").body[0]],
+        handlers=main.handlers, orelse=[], finalbody=[])], type_ignores=[])), '<isolated-activation>', 'exec')
+    runtime_defs = [node for node in tree.body if isinstance(node, ast.FunctionDef)
+        and node.name in {'activate_runtime', 'wait_backend', 'wait_worker'}]
+
+    class OperationalHeadTests(unittest.TestCase):
+        def setUp(self):
+            temporary = tempfile.TemporaryDirectory(prefix='trident-ops-git-test-')
+            self.addCleanup(temporary.cleanup)
+            self.repo = pathlib.Path(temporary.name)
+            self.g('init', '--initial-branch=trident-ai', '--template=')
+            (self.repo/'app.txt').write_text('immutable candidate fixture\n')
+            self.g('add', 'app.txt'); self.g('commit', '-m', 'candidate fixture')
+            self.candidate = self.g('rev-parse', 'HEAD')
+            (self.repo/'scripts').mkdir()
+            (self.repo/OPS_SCRIPT_PATH).write_text('# operational fixture\n')
+            self.g('add', OPS_SCRIPT_PATH); self.g('commit', '-m', 'separate operational fixture')
+            self.ops = self.g('rev-parse', 'HEAD')
+            self.g('update-ref', 'refs/remotes/origin/trident-ai', self.ops)
+            self.g('update-ref', 'refs/heads/main', self.candidate)
+            self.g('update-ref', 'refs/tags/trident-ai-v1.0.0', self.candidate)
+            context = patch.dict(globals(), REPO=self.repo, RELEASE_SHA=self.candidate,
+                OPERATIONAL_HEAD=self.ops, initial_main=self.candidate, GOLD=self.candidate, PROTECTED={})
+            context.start(); self.addCleanup(context.stop)
+
+        def g(self, *args):
+            result = subprocess.run(['/usr/bin/git', '-C', str(self.repo), '-c', 'core.hooksPath=/dev/null',
+                '-c', 'commit.gpgSign=false', '-c', 'user.name=Release Fixture',
+                '-c', 'user.email=release-fixture@example.invalid', *args],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            return result.stdout.decode().strip()
+
+        def test_candidate_plus_separate_operational_commit_accepted(self):
+            self.assertNotEqual(self.candidate, self.ops)
+            self.assertEqual(capture_operational_head(), self.ops)
+            self.assertEqual(RELEASE_SHA, self.candidate)
+            verify_protected()
+
+        def test_any_second_committed_path_rejected(self):
+            (self.repo/'app.txt').write_text('unapproved change\n')
+            self.g('add', 'app.txt'); self.g('commit', '-m', 'forbidden application delta')
+            self.g('update-ref', 'refs/remotes/origin/trident-ai', self.g('rev-parse', 'HEAD'))
+            with self.assertRaisesRegex(GateError, 'allowlist'): capture_operational_head()
+
+        def test_renamed_path_rejected(self):
+            self.g('mv', 'app.txt', 'renamed.txt'); self.g('commit', '-m', 'forbidden rename')
+            self.g('update-ref', 'refs/remotes/origin/trident-ai', self.g('rev-parse', 'HEAD'))
+            with self.assertRaisesRegex(GateError, 'allowlist'): capture_operational_head()
+
+        def test_local_remote_mismatch_rejected(self):
+            self.g('update-ref', 'refs/remotes/origin/trident-ai', self.candidate)
+            with self.assertRaisesRegex(GateError, 'not synchronized'): capture_operational_head()
+
+        def test_candidate_must_be_ancestor(self):
+            unrelated = self.g('commit-tree', self.g('rev-parse', 'HEAD^{tree}'), '-m', 'unrelated root')
+            with patch.dict(globals(), RELEASE_SHA=unrelated):
+                with self.assertRaises(GateError): capture_operational_head()
+
+        def test_dirty_worktree_rejected(self):
+            (self.repo/OPS_SCRIPT_PATH).write_text('uncommitted operational edit\n')
+            with self.assertRaises(GateError): capture_operational_head()
+
+        def test_dirty_index_rejected(self):
+            (self.repo/OPS_SCRIPT_PATH).write_text('staged operational edit\n')
+            self.g('add', OPS_SCRIPT_PATH)
+            with self.assertRaises(GateError): capture_operational_head()
+
+        def test_untracked_source_rejected_visual_review_excluded(self):
+            (self.repo/'visual-review').mkdir()
+            (self.repo/'visual-review/proof.txt').write_text('fixture\n')
+            self.assertEqual(capture_operational_head(), self.ops)
+            (self.repo/'unapproved.py').write_text('# fixture\n')
+            with self.assertRaisesRegex(GateError, 'untracked'): capture_operational_head()
+
+        def test_operational_head_change_rejected_during_release(self):
+            self.g('commit', '--allow-empty', '-m', 'concurrent head movement')
+            with self.assertRaisesRegex(GateError, 'Operational HEAD changed'): verify_protected()
+
+        def test_main_and_gold_protection_preserved(self):
+            for ref, message in [('refs/heads/main', 'main changed'), ('refs/tags/trident-ai-v1.0.0', 'Gold changed')]:
+                with self.subTest(ref=ref):
+                    self.g('update-ref', ref, self.ops)
+                    with self.assertRaisesRegex(GateError, message): verify_protected()
+                    self.g('update-ref', ref, self.candidate)
+
+    class ActivationTests(unittest.TestCase):
+        def scenario(self, failure=None):
+            events, started = [], set()
+            clock, database = [0.0], ['0010_document_lifecycle']
+            ns = dict(globals())
+            def phase_stub(label):
+                ns['STEP'] = label
+                events.append(label)
+                if label == 'SWITCH_NGINX':
+                    self.assertIn('full_runtime_ready', events)
+                    self.assertEqual(started, set(UNITS))
+                    if failure == 'frontend': raise GateError('fixture frontend failure')
+                if label == 'PRODUCTION_SMOKE' and failure == 'smoke': raise GateError('fixture smoke failure')
+            def run_stub(args):
+                self.assertEqual(args[:2], ['/usr/bin/systemctl', 'start'])
+                unit = args[2]; events.append('start:' + unit)
+                if unit == UNITS[1]: self.assertIn('backend_ready', events)
+                if failure == ('backend_start' if unit == UNITS[0] else 'worker_start'):
+                    raise GateError('fixture start failure')
+                started.add(unit)
+            def identity(root, sha, unit):
+                self.assertEqual((root, sha), (NEW, RELEASE_SHA))
+                if unit not in started: raise GateError('fixture unit not started')
+                if unit == UNITS[1] and failure == 'worker_identity': raise GateError('fixture worker cwd mismatch')
+                events.append('identity:' + unit)
+                return 100 if unit == UNITS[0] else 200
+            def health(suffix):
+                if clock[0] < 8 or failure == 'backend_ready': raise GateError('fixture not ready')
+                if suffix == 'live': return {'status': 'ok'}
+                if suffix == 'ready': return {'status': 'ready'}
+                sha = ROLLBACK_SHA if failure == 'backend_recheck' and UNITS[1] in started else RELEASE_SHA
+                return dict(build_sha=sha, migration_head='0011_workspace_images',
+                    migration_revision='0011_workspace_images', environment='production', security_mode='oidc')
+            def migration(direction):
+                self.assertEqual(direction, 'up'); events.append('migration')
+                if failure == 'migration': raise GateError('fixture migration failure')
+                database[0] = '0011_workspace_images'
+            def sleep(delay): clock[0] += delay
+            ns.update(STATE={'stopped': True, 'success': False}, ENGINE=object(),
+                phase=phase_stub, run=run_stub, process_identity=identity, direct_health=health,
+                revision=lambda: database[0], migrate=migration, verify_protected=lambda: None,
+                write_runtime_dropins=lambda *a: events.append('verified_dropins+daemon_reload'),
+                rollback=lambda: events.append('rollback'), report=lambda *a: None,
+                time=types.SimpleNamespace(monotonic=lambda: clock[0], sleep=sleep))
+            exec(compile(ast.Module(body=runtime_defs, type_ignores=[]), '<isolated-runtime>', 'exec'), ns)
+            actual_wait = ns['wait_backend']
+            def wait(*args, **kwargs):
+                actual_wait(*args, **kwargs)
+                events.append('full_runtime_ready' if kwargs.get('include_worker', True) else 'backend_ready')
+            ns['wait_backend'] = wait
+            with contextlib.redirect_stdout(io.StringIO()):
+                if failure:
+                    with self.assertRaises(SystemExit) as raised: exec(scenario_code, ns)
+                    self.assertEqual(raised.exception.code, 1)
+                    self.assertIn('rollback', events)
+                else: exec(scenario_code, ns)
+            return events, clock[0]
+
+        def test_backend_ready_before_worker_and_full_runtime_before_frontend(self):
+            events, elapsed = self.scenario()
+            self.assertGreaterEqual(elapsed, 8)
+            self.assertLess(events.index('migration'), events.index('verified_dropins+daemon_reload'))
+            self.assertLess(events.index('verified_dropins+daemon_reload'), events.index('start:' + UNITS[0]))
+            self.assertLess(events.index('backend_ready'), events.index('start:' + UNITS[1]))
+            self.assertLess(events.index('start:' + UNITS[1]), events.index('identity:' + UNITS[1]))
+            self.assertLess(events.index('identity:' + UNITS[1]), events.index('full_runtime_ready'))
+            self.assertLess(events.index('full_runtime_ready'), events.index('SWITCH_NGINX'))
+
+        def test_backend_failure_never_starts_worker(self):
+            for failure in ('backend_start', 'backend_ready'):
+                with self.subTest(failure=failure):
+                    events, elapsed = self.scenario(failure)
+                    self.assertNotIn('start:' + UNITS[1], events)
+                    self.assertNotIn('SWITCH_NGINX', events)
+                    if failure == 'backend_ready': self.assertEqual(elapsed, READINESS_TIMEOUT)
+
+        def test_worker_failure_rolls_back_before_frontend(self):
+            for failure in ('worker_start', 'worker_identity'):
+                with self.subTest(failure=failure):
+                    events, elapsed = self.scenario(failure)
+                    self.assertIn('backend_ready', events)
+                    self.assertNotIn('SWITCH_NGINX', events)
+                    if failure == 'worker_identity': self.assertEqual(elapsed, 8 + READINESS_TIMEOUT)
+
+        def test_backend_recheck_failure_blocks_frontend(self):
+            events, _ = self.scenario('backend_recheck')
+            self.assertIn('identity:' + UNITS[1], events)
+            self.assertNotIn('SWITCH_NGINX', events)
+
+        def test_failure_handler_covers_migration_frontend_and_smoke(self):
+            for failure in ('migration', 'frontend', 'smoke'):
+                with self.subTest(failure=failure):
+                    events, _ = self.scenario(failure)
+                    self.assertEqual(events[-1], 'rollback')
+                    if failure == 'migration': self.assertNotIn('start:' + UNITS[0], events)
+
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+        for case in (OperationalHeadTests, ActivationTests))
+    return unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful()
+
+if sys.argv[1:] == ['--self-test']:
+    sys.exit(0 if run_delivery_self_tests() else 1)
+
 def interrupted(signum, frame): raise GateError('Release interrupted by signal')
 signal.signal(signal.SIGTERM, interrupted)
 signal.signal(signal.SIGINT, interrupted)
@@ -433,11 +688,9 @@ try:
     gate(os.geteuid() == 0, 'Root execution required')
     lock = open('/run/lock/trident-spatial-release.lock', 'a')
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    gate(git('branch', '--show-current') == 'trident-ai', 'Wrong branch')
-    gate(git('rev-parse', 'HEAD') == RELEASE_SHA and git('rev-parse', 'origin/trident-ai') == RELEASE_SHA, 'Candidate SHA mismatch')
+    OPERATIONAL_HEAD = capture_operational_head()
     gate(git('rev-parse', 'trident-ai-v1.0.0^{commit}') == GOLD, 'Gold mismatch')
     initial_main = git('rev-parse', 'refs/heads/main')
-    git('diff', '--exit-code'); git('diff', '--cached', '--exit-code'); git('diff', '--check')
     gate(ARCHIVE.is_file() and digest(ARCHIVE) == ARCHIVE_HASH, 'Approved archive checksum mismatch')
     gate((OLD/'frontend/dist/index.html').is_file(), 'Rollback release missing')
     config = nginx_check()
@@ -577,8 +830,7 @@ try:
     phase('ACTIVATE_MATCHING_BACKEND')
     service_since = dt.datetime.now(dt.timezone.utc).isoformat()
     write_runtime_dropins(NEW, RELEASE_SHA)
-    for unit in UNITS: run(['/usr/bin/systemctl', 'start', unit])
-    wait_backend(NEW, RELEASE_SHA, '0011_workspace_images')
+    activate_runtime(NEW, RELEASE_SHA, '0011_workspace_images')
     phase('SWITCH_NGINX')
     smoke_since = dt.datetime.now(dt.timezone.utc).isoformat()
     access = pathlib.Path('/var/log/nginx/access.log')
