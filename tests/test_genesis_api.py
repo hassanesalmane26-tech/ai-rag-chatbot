@@ -204,7 +204,7 @@ class GenesisApiTests(unittest.TestCase):
         self.assertEqual(overview.status_code, 200, overview.text)
         self.assertEqual(
             overview.json()["data"]["metrics"],
-            {"conversations": 0, "documents": 0, "messages": 0, "memories": 0},
+            {"conversations": 0, "documents": 0, "messages": 0, "memories": 0, "images": 0},
         )
         self.assertEqual(
             [module["id"] for module in overview.json()["data"]["modules"]],

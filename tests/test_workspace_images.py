@@ -109,6 +109,21 @@ class WorkspaceImagesTests(unittest.TestCase):
             self.assertEqual(db.query(WorkspaceMessage).count(), 2)
             self.assertEqual(db.get(ImageArtifact, item["id"]).provider, "test")
 
+    def test_workspace_overview_counts_only_completed_images_in_scope(self):
+        completed = self.enqueue("completed-image").json()["data"]
+        self.assertTrue(self.process(completed["id"]))
+        queued = self.enqueue("queued-image").json()["data"]
+        failed = self.enqueue("failed-image").json()["data"]
+        self.provider.generate.side_effect = RuntimeError("test provider failure")
+        self.assertTrue(self.process(failed["id"]))
+
+        overview = self.request("GET", "/v1/workspaces/ws/overview")
+        self.assertEqual(overview.status_code, 200, overview.text)
+        self.assertEqual(overview.json()["data"]["metrics"]["images"], 1)
+        self.assertEqual(queued["status"], "queued")
+        other = self.request("GET", "/v1/workspaces/ws2/overview")
+        self.assertEqual(other.json()["data"]["metrics"]["images"], 0)
+
     def test_missing_config_does_not_create_false_task_or_message(self):
         self.config.image_provider = "disabled"
         self.assertFalse(self.request("GET", "/v1/workspaces/ws/images/capability").json()["data"]["available"])
