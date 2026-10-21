@@ -153,7 +153,10 @@ async function makePage(browser, { width, height, mobile = false, loadingEnabled
   const page = await context.newPage();
   page.on("pageerror", (error) => report.page_errors.push(error.message));
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: "Workspace avec images terminées" }).waitFor({ timeout: 15000 });
+  const appReady = mobile
+    ? page.getByRole("button", { name: "Ouvrir le menu système TRIDENT" })
+    : page.getByRole("heading", { name: "Workspace avec images terminées" });
+  await appReady.waitFor({ timeout: 15000 });
   await openHome(page);
   return { context, page };
 }
