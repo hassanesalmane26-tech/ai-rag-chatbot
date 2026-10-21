@@ -1,29 +1,27 @@
 name: "PR #1 Nova Images visual validation (temporary)"
 
 on:
-  pull_request:
-    branches: [trident-ai]
-    types: [opened, reopened, synchronize]
+  push:
+    branches: [codex/mission-01-managed-dev]
 
 permissions:
   contents: read
 
 concurrency:
-  group: nova-image-visual-pr-${{ github.event.pull_request.number }}
+  group: nova-image-visual-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   visual-validation:
-    if: github.event.pull_request.number == 1 && github.event.pull_request.head.ref == 'codex/mission-01-managed-dev'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       TRIDENT_VISUAL_OUTPUT_DIR: ${{ runner.temp }}/trident-nova-image-visual
-      TRIDENT_TESTED_SHA: ${{ github.event.pull_request.head.sha }}
+      TRIDENT_TESTED_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.sha }}
 
       - uses: actions/setup-node@v4
         with:
@@ -55,7 +53,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nova-image-visual-${{ github.event.pull_request.head.sha }}
+          name: nova-image-visual-${{ github.sha }}
           path: ${{ runner.temp }}/trident-nova-image-visual
           if-no-files-found: warn
           retention-days: 30
