@@ -13,7 +13,7 @@ from app.database.genesis_models import Conversation, Workspace, WorkspaceDocume
 from app.identity.contracts import AuthenticatedPrincipal
 from app.images.contracts import image_intent, image_edit_intent
 from app.images.models import ImageArtifact
-from app.images.service import enqueue_image, serialize_artifact
+from app.images.service import completed_artifact_count, enqueue_image, serialize_artifact
 from app.governance.audit import append_audit_event
 from app.governance.quotas import consume_hourly_quota, enforce_resource_quota
 from app.knowledge.service import (
@@ -162,7 +162,10 @@ def read_overview(
     db: Session = Depends(get_db),
     _tenant: TenantContext = Depends(require_workspace_access),
 ):
-    return data(workspace_activity(db, get_workspace(workspace_id, db)))
+    workspace = get_workspace(workspace_id, db)
+    overview = workspace_activity(db, workspace)
+    overview["metrics"]["images"] = completed_artifact_count(db, workspace.id)
+    return data(overview)
 
 
 @router.get("/workspaces/{workspace_id}/conversations")

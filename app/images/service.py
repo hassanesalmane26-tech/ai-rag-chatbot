@@ -37,6 +37,10 @@ def serialize_artifact(item, actor_id):
     }
 
 
+def completed_artifact_count(db, workspace_id):
+    return db.query(ImageArtifact).filter_by(workspace_id=workspace_id, status="completed").count()
+
+
 def get_artifact(db, workspace_id, artifact_id):
     item = db.get(ImageArtifact, artifact_id)
     if item is None or item.workspace_id != workspace_id:

@@ -1,0 +1,63 @@
+name: "PR #1 Nova Images visual validation (temporary)"
+
+on:
+  push:
+    branches: [codex/mission-01-managed-dev]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nova-image-visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TRIDENT_TESTED_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install locked frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Install temporary Playwright runner
+        run: npm install --prefix frontend --no-save --package-lock=false --no-audit --no-fund playwright@1.63.0
+
+      - name: Install Chromium and runner-only libraries
+        run: frontend/node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Build local frontend preview
+        run: npm run build --prefix frontend
+
+      - name: Prepare temporary screenshot directory
+        run: |
+          mkdir -p "$RUNNER_TEMP/trident-nova-image-visual"
+          echo "TRIDENT_VISUAL_OUTPUT_DIR=$RUNNER_TEMP/trident-nova-image-visual" >> "$GITHUB_ENV"
+
+      - name: Run synthetic Workspace Home browser scenarios
+        env:
+          PLAYWRIGHT_MODULE: ${{ github.workspace }}/frontend/node_modules/playwright/index.mjs
+        run: |
+          mkdir -p "$TRIDENT_VISUAL_OUTPUT_DIR"
+          node .github/scripts/nova-image-visual-validation.mjs
+          cat "$TRIDENT_VISUAL_OUTPUT_DIR/summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload screenshots and test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nova-image-visual-${{ github.sha }}
+          path: ${{ runner.temp }}/trident-nova-image-visual
+          if-no-files-found: warn
+          retention-days: 30
