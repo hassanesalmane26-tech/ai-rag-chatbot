@@ -16,7 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      TRIDENT_VISUAL_OUTPUT_DIR: ${{ runner.temp }}/trident-nova-image-visual
       TRIDENT_TESTED_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +39,11 @@ jobs:
 
       - name: Build local frontend preview
         run: npm run build --prefix frontend
+
+      - name: Prepare temporary screenshot directory
+        run: |
+          mkdir -p "$RUNNER_TEMP/trident-nova-image-visual"
+          echo "TRIDENT_VISUAL_OUTPUT_DIR=$RUNNER_TEMP/trident-nova-image-visual" >> "$GITHUB_ENV"
 
       - name: Run synthetic Workspace Home browser scenarios
         env:
